@@ -28,6 +28,7 @@ class VakhshourDeamon(object):
     """
 
     DESC = "Vakhshour - Event and Message layer application"
+    FORMAT = '[%(asctime)s] %(module)s - %(lineno)d [%(levelname)s]:  %(message)s'
 
     def __init__(self, args):
         self._setup_arguments(args)
@@ -67,11 +68,17 @@ class VakhshourDeamon(object):
         Setup logger.
         """
         # TODO: configure logger
+        level = 25
+        if self.args.debug:
+            level = 0
+
+        logging.basicConfig(format=self.FORMAT,
+                            level=level)
         self.logger = logging.getLogger("vakhshur")
         return
 
     def run(self):
         if self.args.master:
-            print "MASTER"
+            self.logger.error("MASTER")
         else:
-            print "Slave"
+            self.logger.debug("Slave")
