@@ -21,10 +21,12 @@ import logging
 
 from argparse import ArgumentParser
 
+from servers import Publisher, Subscriber
 
-class VakhshourDeamon(object):
+
+class Vakhshour(object):
     """
-    Vakhshur daemon main class.
+    Vakhshour main class.
     """
 
     DESC = "Vakhshour - Event and Message layer application"
@@ -79,6 +81,8 @@ class VakhshourDeamon(object):
 
     def run(self):
         if self.args.master:
-            self.logger.error("MASTER")
+            app = Publisher()
         else:
-            self.logger.debug("Slave")
+            app = Subscriber()
+
+        app.run()

@@ -1,4 +1,3 @@
-#! /usr/bin/env pytho
 # -----------------------------------------------------------------------------
 #    Vakhshour - Event and Message layer application
 #    Copyright (C) 2012 Yellowen
@@ -18,12 +17,36 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
 
-import sys
-
-from vakhshour.base import Vakhshour
+import zmq
 
 
+class Server(object):
+    """
+    Server Base Class.
+    """
+
+    def __init__(self):
+        self.context = zmq.Context()
+        self.socket = self.context.socket(self.soeckt_type)
 
 
-app = Vakhshour()
-app.run()
+class Publisher(Server):
+    """
+    Publisher server. This server will publish events using zmq pub/sub socket.
+    """
+
+    socket_type = zmq.PUB
+
+    def run(self):
+        pass
+
+
+class Subscriber(Server):
+    """
+    Subscriber server. this server will receive the event using SUB socket.
+    also push the events.
+    """
+    socket_type = zmq.PUB
+
+    def run(self):
+        pass
