@@ -17,11 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
 
+import json
 import logging
 
 from argparse import ArgumentParser
 
-from servers import Publisher, Subscriber
+from servers import EventPublisher, EventSubscriber
 
 
 class Vakhshour(object):
@@ -32,11 +33,12 @@ class Vakhshour(object):
     DESC = "Vakhshour - Event and Message layer application"
     FORMAT = '[%(asctime)s] %(module)s - %(lineno)d [%(levelname)s]:  %(message)s'
 
-    def __init__(self, args):
-        self._setup_arguments(args)
+    def __init__(self):
+        self._setup_arguments()
         self._setup_logger()
+        self._parse_config()
 
-    def _setup_arguments(self, args):
+    def _setup_arguments(self):
         """
         Setup command line parser.
         """
@@ -57,7 +59,7 @@ class Vakhshour(object):
                                  )
 
         self.parser.add_argument("-c", "--config",
-                                 default="/etc/vakhshour/vakhshour.conf",
+                                 default="/etc/vakhshour/vakhshour.json",
                                  dest="config",
                                  help="Use CONFIG as configuration file."
                                  )
@@ -76,13 +78,25 @@ class Vakhshour(object):
 
         logging.basicConfig(format=self.FORMAT,
                             level=level)
-        self.logger = logging.getLogger("vakhshur")
+        self.logger = logging.getLogger("vakhshour")
         return
+
+    def _parse_config(self):
+        """
+        Parse the json configuration file.
+        """
+        try:
+
+            self.config = json.loads(self.args.config)
+        except ValueError:
+            self.logger.critical("Config file '%s' does not exists." % (
+                self.args.config))
+            exit(1)
 
     def run(self):
         if self.args.master:
-            app = Publisher()
+            app = EventPublisher(config=self.config)
         else:
-            app = Subscriber()
+            app = EventSubscriber(config=self.config)
 
         app.run()

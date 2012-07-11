@@ -16,6 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
+import logging
 
 import zmq
 
@@ -25,23 +26,54 @@ class Server(object):
     Server Base Class.
     """
 
-    def __init__(self):
+    def __init__(self, config):
         self.context = zmq.Context()
-        self.socket = self.context.socket(self.soeckt_type)
+        self.config = config
+        self.logger = logging.getLogger("vakhshour")
 
 
-class Publisher(Server):
+class EventPublisher(Server):
     """
     Publisher server. This server will publish events using zmq pub/sub socket.
     """
 
     socket_type = zmq.PUB
+    _rep_port = "11111"
+    _pub_port = "11112"
+    _default_ip = "127.0.0.1"
+
+    def __init__(self, *args, **kwargs):
+        super(EventPublisher, self).__init__(*args, **kwargs)
+
+        # Establish Response socket
+        self.repsocket = self.context.socket(zmq.REP)
+        port = self.config.get("rep_port", self._rep_port)
+        self.repsocket.bind(self._address(port))
+
+        # Establish publisher socket
+        self.pubsocket = self.context.socket(zmq.PUB)
+        port = self.config.get("pub_port", self._pub_port)
+        self.pubsocket.bind(self._address(port))
 
     def run(self):
-        pass
+        """
+        Main method that is responsible for server run.
+        """
+        self.logger.debug("EventPublisher is running.")
+        while True:
+            data = self.repsocket.recv()
+            self.logger.info("RECV: %s" % data)
+            self.pubsocket.send(data)
+
+    def _address(self, port):
+        # TODO: create more flexible config for server address
+        # so user can run REP/RES socket on an address and PUB
+        # on a different address
+        ip = self.config.get("ip". self._default_ip)
+        return "tcp://%s:%s" % (ip, port)
 
 
-class Subscriber(Server):
+class EventSubscriber(Server):
     """
     Subscriber server. this server will receive the event using SUB socket.
     also push the events.
