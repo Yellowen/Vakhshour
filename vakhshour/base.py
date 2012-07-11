@@ -79,7 +79,7 @@ class Event():
         print "Send Event: %s" % unicode(self.packet)
         self.push.send_unicode(unicode(self.packet))
         result = self.pull.recv()
-        if result == 0:
+        if result == "0":
             print "GOOD"
         else:
-            "bad"
+            print "bad"
