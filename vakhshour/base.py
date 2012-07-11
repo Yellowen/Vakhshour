@@ -86,17 +86,32 @@ class Vakhshour(object):
         Parse the json configuration file.
         """
         try:
+            fd = open(self.args.config)
 
-            self.config = json.loads(self.args.config)
-        except ValueError:
+        except IOError:
             self.logger.critical("Config file '%s' does not exists." % (
                 self.args.config))
             exit(1)
 
+        try:
+
+            self.config = json.load(fd)
+        except ValueError:
+            fd.close()
+            self.logger.critical("Config file '%s' is not a json file." % (
+                self.args.config))
+            exit(1)
+
+        fd.close()
+
     def run(self):
+        self.logger.info("Hi Vakhshour is here.")
         if self.args.master:
             app = EventPublisher(config=self.config)
         else:
             app = EventSubscriber(config=self.config)
 
-        app.run()
+        try:
+            app.run()
+        except KeyboardInterrupt:
+            self.logger.info("Bye bye")

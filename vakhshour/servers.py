@@ -45,9 +45,11 @@ class EventPublisher(Server):
     def __init__(self, *args, **kwargs):
         super(EventPublisher, self).__init__(*args, **kwargs)
 
+        # TODO: maybe i have to use PUSH/PULL socket instead of rep/req
         # Establish Response socket
         self.repsocket = self.context.socket(zmq.REP)
         port = self.config.get("rep_port", self._rep_port)
+        self.logger.debug("Binding REP to %s" % self._address(port))
         self.repsocket.bind(self._address(port))
 
         # Establish publisher socket
@@ -59,8 +61,9 @@ class EventPublisher(Server):
         """
         Main method that is responsible for server run.
         """
-        self.logger.debug("EventPublisher is running.")
+        self.logger.info("EventPublisher is running.")
         while True:
+            self.logger.debug("Entering event loop")
             data = self.repsocket.recv()
             self.logger.info("RECV: %s" % data)
             self.pubsocket.send(data)
@@ -69,7 +72,7 @@ class EventPublisher(Server):
         # TODO: create more flexible config for server address
         # so user can run REP/RES socket on an address and PUB
         # on a different address
-        ip = self.config.get("ip". self._default_ip)
+        ip = self.config.get("ip", self._default_ip)
         return "tcp://%s:%s" % (ip, port)
 
 
