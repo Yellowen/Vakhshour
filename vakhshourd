@@ -20,7 +20,7 @@
 
 import sys
 
-from vakhshour.base import Vakhshour
+from vakhshour.application import Vakhshour
 
 
 

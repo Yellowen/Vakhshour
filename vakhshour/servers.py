@@ -21,7 +21,10 @@ import logging
 import zmq
 
 
-class Server(object):
+from base import VObject
+
+
+class Server(VObject):
     """
     Server Base Class.
     """
@@ -29,7 +32,25 @@ class Server(object):
     def __init__(self, config):
         self.context = zmq.Context()
         self.config = config
-        self.logger = logging.getLogger("vakhshour")
+
+    def _address(self, port):
+        # TODO: create more flexible config for server address
+        # so user can run PULL/PUSH socket on an address and PUB
+        # on a different address
+        ip = self.config.get("ip", self._default_ip)
+        return "tcp://%s:%s" % (ip, port)
+
+    def _establish_pull_push(self):
+        # Establish PULL/PULL sockets
+        self.pullsocket = self.context.socket(zmq.PULL)
+        self.pushsocket = self.context.socket(zmq.PUSH)
+        port = self.config.get("pull_port", self._pull_port)
+        self.logger.debug("Binding PULL to %s" % self._address(port))
+        self.pullsocket.bind(self._address(port))
+
+        self.logger.debug("Binding PSHL to %s" % self._address(port))
+        port = self.config.get("push_port", self._push_port)
+        self.pushsocket.bind(self._address(port))
 
 
 class EventPublisher(Server):
@@ -37,20 +58,15 @@ class EventPublisher(Server):
     Publisher server. This server will publish events using zmq pub/sub socket.
     """
 
-    socket_type = zmq.PUB
-    _rep_port = "11111"
-    _pub_port = "11112"
+    _pull_port = "11111"
+    _push_port = "11112"
+    _pub_port = "11113"
     _default_ip = "127.0.0.1"
 
     def __init__(self, *args, **kwargs):
         super(EventPublisher, self).__init__(*args, **kwargs)
 
-        # TODO: maybe i have to use PUSH/PULL socket instead of rep/req
-        # Establish Response socket
-        self.repsocket = self.context.socket(zmq.REP)
-        port = self.config.get("rep_port", self._rep_port)
-        self.logger.debug("Binding REP to %s" % self._address(port))
-        self.repsocket.bind(self._address(port))
+        self._establish_pull_push()
 
         # Establish publisher socket
         self.pubsocket = self.context.socket(zmq.PUB)
@@ -64,16 +80,10 @@ class EventPublisher(Server):
         self.logger.info("EventPublisher is running.")
         while True:
             self.logger.debug("Entering event loop")
-            data = self.repsocket.recv()
+            data = self.pullsocket.recv()
+            self.pushsocket.send("0")
             self.logger.info("RECV: %s" % data)
             self.pubsocket.send(data)
-
-    def _address(self, port):
-        # TODO: create more flexible config for server address
-        # so user can run REP/RES socket on an address and PUB
-        # on a different address
-        ip = self.config.get("ip", self._default_ip)
-        return "tcp://%s:%s" % (ip, port)
 
 
 class EventSubscriber(Server):
@@ -81,7 +91,28 @@ class EventSubscriber(Server):
     Subscriber server. this server will receive the event using SUB socket.
     also push the events.
     """
-    socket_type = zmq.PUB
+    _sub_port = "11116"
+    _pull_port = "11114"
+    _push_port = "11115"
+
+    _default_ip = "127.0.0.1"
+
+    def __init__(self, *args, **kwargs):
+        super(EventSubscriber, self).__init__(*args, **kwargs)
+
+        #self._establish_pull_push()
+
+        # Establish publisher socket
+        self.subsocket = self.context.socket(zmq.PUB)
+        port = self.config.get("sub_port", self._sub_port)
+        self.subsocket.bind(self._address(port))
 
     def run(self):
-        pass
+        """
+        Main method that is responsible for server run.
+        """
+        self.logger.info("EventSubscriber is running.")
+        while True:
+            self.logger.debug("Entering event loop")
+            data = self.subsocket.recv()
+            self.logger.info("RECV: %s" % data)
