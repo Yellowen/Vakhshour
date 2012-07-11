@@ -91,7 +91,7 @@ class EventSubscriber(Server):
     Subscriber server. this server will receive the event using SUB socket.
     also push the events.
     """
-    _sub_port = "11116"
+    _sub_port = "11113"
     _pull_port = "11114"
     _push_port = "11115"
 
@@ -103,9 +103,10 @@ class EventSubscriber(Server):
         #self._establish_pull_push()
 
         # Establish publisher socket
-        self.subsocket = self.context.socket(zmq.PUB)
+        self.subsocket = self.context.socket(zmq.SUB)
         port = self.config.get("sub_port", self._sub_port)
-        self.subsocket.bind(self._address(port))
+        self.subsocket.connect(self._address(port))
+        self.subsocket.setsockopt(zmq.SUBSCRIBE, "")
 
     def run(self):
         """
