@@ -19,6 +19,7 @@
 
 import zmq
 import json
+import hashlib
 import logging
 
 from argparse import ArgumentParser
@@ -32,54 +33,94 @@ class VObject(object):
     logger = logging.getLogger("vakhshour")
 
 
-class Packet(VObject):
-    """
-    Base Class For all packets
-    """
-    _structure = {}
+class Packet(object):
 
-    def __init__(self, data=None):
-        if data:
-            # TODO: Error handling
-            self._structure = json.loads(data)
+    _data = {"data": None,
+             "hash": None}
+
+    def __init__(self, data):
+        if isinstance(data, basestring):
+            self._data = json.loads(data)
+        else:
+            self._data["data"] = data
+
+    def _gen_hash(self, key):
+        m = hashlib.sha1()
+        m.update(unicode(self._data["data"]) + key)
+        return m.hexdigest()
+
+    def sign(self, key):
+        """
+        Sign a packet and add the corresponding checksum.
+        """
+        self._data["hash"] = self._gen_hash(key)
+        return self._data["hash"]
+
+    def is_valid(self, key):
+        hash_ = self._gen_hash(key)
+        if self._data["hash"] == hash_:
+            return True
+        else:
+            return False
 
     def __unicode__(self):
-        return json.dumps(self._structure)
+        return json.dumps(self._data)
 
+    def __str__(self):
+        return self.__unicode__()
 
-class EventPacket(Packet):
-    """
-    Event Packet
-    """
-    def __init__(self, data=None, **kwargs):
-        if data:
-            self._structure = json.loads(data)
+    def __getattr__(self, name):
+        if name in self._data["data"]:
+            return self._data["data"][name]
         else:
-            self._structure = kwargs
+            raise AttributeError(
+                "'Packet' object has no attribute '%s'" % name)
+
+    def __setattr__(self, name, value):
+        self._data[name] = value
 
 
-class Event():
+class Event(Packet):
     """
     This class represent a web event and act as a client for vakhshour.
     You can use this class to send events.
     """
 
-    def __init__(self, name, ip="127.0.0.1", pushport="11111",
-                 pullport="11112"):
+    def __init__(self, name=None, sender=None,
+                 data=None, **kwargs):
+        if data:
+            super(Event, self).__init__(data)
+        else:
+            a = {"name": name,
+                 "params": kwargs,
+                 "sender": sender,
+                 }
+            super(Event, self).__init__(a)
+
+
+class Node(object):
+    """
+    This Class represent a network node. You should use it to send
+    Events.
+    """
+
+    def __init__(self, ip="127.0.0.1", pushport="11111", pullport="11112"):
+        self.push = zmq.Context().socket(zmq.PUSH)
+        self.pull = zmq.Context().socket(zmq.PULL)
+
         self.ip = ip
         self.pushport = pushport
         self.pullport = pullport
-        self.push = zmq.Context().socket(zmq.PUSH)
-        self.pull= zmq.Context().socket(zmq.PULL)
-        self.packet = EventPacket(name=name)
 
-    def send(self):
+    def send(self, data):
         self.push.connect("tcp://%s:%s" % (self.ip, self.pushport))
         self.pull.connect("tcp://%s:%s" % (self.ip, self.pullport))
-        print "Send Event: %s" % unicode(self.packet)
-        self.push.send_unicode(unicode(self.packet))
-        result = self.pull.recv()
-        if result == "0":
-            print "GOOD"
+
+        print "Send Event: %s" % unicode(data)
+        self.push.send_unicode(unicode(data))
+        result = Packet(self.pull.recv())
+
+        if result.code == 0:
+            return 0
         else:
-            print "bad"
+            return result.code

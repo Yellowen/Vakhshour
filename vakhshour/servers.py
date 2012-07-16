@@ -33,17 +33,22 @@ class Server(VObject):
         self.context = zmq.Context()
         self.config = config
 
-    def _address(self, port):
+    def _address(self, port, ip=None):
         # TODO: create more flexible config for server address
         # so user can run PULL/PUSH socket on an address and PUB
         # on a different address
-        ip = self.config.get("ip", self._default_ip)
+        address = self._default_ip
+        if ip:
+            address = ip
+
+        ip = self.config.get("ip", address)
         return "tcp://%s:%s" % (ip, port)
 
     def _establish_pull_push(self):
         # Establish PULL/PULL sockets
         self.pullsocket = self.context.socket(zmq.PULL)
         self.pushsocket = self.context.socket(zmq.PUSH)
+
         port = self.config.get("pull_port", self._pull_port)
         self.logger.debug("Binding PULL to %s" % self._address(port))
         self.pullsocket.bind(self._address(port))
@@ -92,15 +97,15 @@ class EventSubscriber(Server):
     also push the events.
     """
     _sub_port = "11113"
-    _pull_port = "11114"
-    _push_port = "11115"
+    _pull_port = "22222"
+    _push_port = "22223"
 
     _default_ip = "127.0.0.1"
 
     def __init__(self, *args, **kwargs):
         super(EventSubscriber, self).__init__(*args, **kwargs)
 
-        #self._establish_pull_push()
+        self._establish_pull_push()
 
         # Establish publisher socket
         self.subsocket = self.context.socket(zmq.SUB)
