@@ -17,19 +17,14 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
 
-from base import Packet
 
+class EventHandlers(object):
+    _registry = {}
 
-def autodiscovery(installed_apps):
-    for app in installed_apps:
-        try:
-            module = __import__("%s.handlers" % app,
-                                globals(),
-                                locals(),
-                                ['event_handlers'],
-                                -1)
-
-            if hasattr(module, "event_handlers"):
-                pass
-        except ImportError:
-            pass
+    def register(self, event, handlers):
+        if "event" in self._registry:
+            if event in self._registry:
+                self._registry[event].extend(handlers)
+            else:
+                self._registry[event] = handlers
+            self._registry[event] = list(set(self._registry[event]))

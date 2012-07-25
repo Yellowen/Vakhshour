@@ -118,9 +118,6 @@ class Node(object):
 
         print "Send Event: %s" % unicode(data)
         self.push.send_unicode(unicode(data))
-        result = Packet(self.pull.recv())
-
-        if result.code == 0:
-            return 0
-        else:
-            return result.code
+        print "1"
+        response = self.pull.recv()
+        return int(response)

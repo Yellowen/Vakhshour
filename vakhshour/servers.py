@@ -112,49 +112,36 @@ class EventSubscriber(Server):
     def __init__(self, *args, **kwargs):
         super(EventSubscriber, self).__init__(*args, **kwargs)
 
-        self._establish_pull_push(push_host="127.0.0.1",
-                                  pull_host="127.0.0.1")
-
         self._establish_subscriber()
         self.queue = Queue()
 
-        self.subscriber_thread = Thread(target=self._subscriber_loop)
-        self.register_events_thread = Thread(target=self._register_events_loop)
-
-        self.subscriber_thread.daemon = True
-        self.register_events_thread.daemon = True
-
-    def _subscriber_loop(self):
+    def worker(self):
         """
-        Subscriber thread.
+        Get a task from queue and process it.
         """
         while True:
-            self.logger.debug("Entering event receiveing loop")
-            data = self.subsocket.recv()
-            self.logger.info("EVENT RECV: %s" % data)
-            self.queue.put(data)
+            task = self.queue.get()
+            self.process(task)
+            self.queue.task_done()
 
-    def _register_events_loop(self):
-        """
-        Event registering thread.
-        """
-        while True:
-            self.logger.debug("Entering event registering loop")
-            data = self.pullsocket.recv()
-            self.logger.info("PULL RECV: %s" % data)
-            self.queue.put(data)
+    def process(self, task):
+        print "  --- PROCESS ---  "
 
     def run(self):
         """
         Main method that is responsible for server run.
         """
-        self.subscriber_thread.start()
-        self.logger.info("EventSubscriber is running.")
-        self.register_events_thread.start()
-        self.logger.info("Event registeration is running.")
-        while 1:
-            task = self.queue.get()
-            print task
+        for i in xrange(int(self.config.get("workers", 2))):
+            worker = Thread(target=self.worker)
+            worker.daemon = True
+            worker.start()
+
+        self.logger.info("Workers spawned.")
+        while True:
+            self.logger.debug("Entering event receiveing loop")
+            data = self.subsocket.recv()
+            self.logger.info("EVENT RECV: %s" % data)
+            self.queue.put(data)
 
     def _establish_subscriber(self):
         """
