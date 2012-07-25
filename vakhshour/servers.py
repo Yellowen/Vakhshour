@@ -23,7 +23,7 @@ from threading import Thread
 import zmq
 
 
-from base import VObject
+from base import VObject, Event
 
 
 class Server(VObject):
@@ -82,14 +82,37 @@ class EventPublisher(Server):
         port = self.config.get("pub_port", self._pub_port)
         self.pubsocket.bind(self._address(port))
 
+        self.queue = Queue()
+
+        self.web_clients = self.config.get("web_clients", [])
+
+    def worker(self):
+        """
+        Get a task from queue and process it.
+        """
+        while True:
+            task = self.queue.get()
+            self.process(task)
+            self.queue.task_done()
+
+    def process(self, task):
+        print "  --- PROCESS ---  "
+
     def run(self):
         """
         Main method that is responsible for server run.
         """
+        for i in xrange(int(self.config.get("workers", 2))):
+            worker = Thread(target=self.worker)
+            worker.daemon = True
+            worker.start()
+
         self.logger.info("EventPublisher is running.")
         while True:
             self.logger.debug("Entering event loop")
             data = self.pullsocket.recv()
+            event = Event(data=data)
+
             self.pushsocket.send("0")
             self.logger.info("RECV: %s" % data)
             self.pubsocket.send(data)
@@ -131,10 +154,6 @@ class EventSubscriber(Server):
         """
         Main method that is responsible for server run.
         """
-        for i in xrange(int(self.config.get("workers", 2))):
-            worker = Thread(target=self.worker)
-            worker.daemon = True
-            worker.start()
 
         self.logger.info("Workers spawned.")
         while True:
