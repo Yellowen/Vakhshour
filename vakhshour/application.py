@@ -64,6 +64,12 @@ class Vakhshour(object):
                                  help="Use CONFIG as configuration file."
                                  )
 
+        self.parser.add_argument("-s", "--secure",
+                                 action="store_true",
+                                 default=False,
+                                 help="Use Secure Connections."
+                                 )
+
         self.args = self.parser.parse_args()
         return
 

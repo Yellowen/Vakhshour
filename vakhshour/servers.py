@@ -16,12 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
+import os
+import stat
 import logging
 from Queue import Queue
 from threading import Thread
 
 import zmq
-
 
 from base import VObject, Event
 
@@ -34,12 +35,17 @@ class Server(VObject):
     def __init__(self, config):
         self.context = zmq.Context()
         self.config = config
+        self.secure = config.get("secure", None)
 
-    def _address(self, port, ip=None):
+    def _address(self, port, ip=None, sock_type="pub"):
         # TODO: create more flexible config for server address
         # so user can run PULL/PUSH socket on an address and PUB
         # on a different address
-        address = self._default_ip
+        if self.secure:
+            return "ipc:///tmp/vakhshour.%s" % sock_type
+
+        address = self.config.get("host", self._default_ip)
+
         if ip:
             address = ip
 
@@ -51,15 +57,19 @@ class Server(VObject):
         self.pullsocket = self.context.socket(zmq.PULL)
         self.pushsocket = self.context.socket(zmq.PUSH)
 
-        host = pull_host or self._default_ip
         port = self.config.get("pull_port", self._pull_port)
-        self.logger.debug("Binding PULL to %s" % self._address(port, host))
-        self.pullsocket.bind(self._address(port))
+        self.logger.debug("Binding PULL to %s" % self._address(port, sock_type="pull"))
+        self.pullsocket.bind(self._address(port, sock_type="pull"))
 
-        host = push_host or self._default_ip
-        self.logger.debug("Binding PUSH to %s" % self._address(port, host))
+        self.logger.debug("Binding PUSH to %s" % self._address(port, sock_type="push"))
         port = self.config.get("push_port", self._push_port)
-        self.pushsocket.bind(self._address(port))
+        self.pushsocket.bind(self._address(port, sock_type="push"))
+
+        if self.secure:
+            os.chmod(self._address(port, sock_type="push").split("ipc://")[1],
+                     stat.S_IREAD | stat.S_IWRITE)
+            os.chmod(self._address(port, sock_type="pull").split("ipc://")[1],
+                     stat.S_IREAD | stat.S_IWRITE)
 
 
 class EventPublisher(Server):
@@ -81,6 +91,10 @@ class EventPublisher(Server):
         self.pubsocket = self.context.socket(zmq.PUB)
         port = self.config.get("pub_port", self._pub_port)
         self.pubsocket.bind(self._address(port))
+
+        if self.secure:
+            os.chmod(self._address(port).split("ipc://")[1],
+                     stat.S_IREAD | stat.S_IWRITE)
 
         self.queue = Queue()
 
@@ -110,27 +124,21 @@ class EventPublisher(Server):
         self.logger.info("EventPublisher is running.")
         while True:
             self.logger.debug("Entering event loop")
-            data = self.pullsocket.recv()
-            event = Event(data=data)
+            event = self.pullsocket.recv_pyobj()
+            #event = Event(data=data)
 
             self.pushsocket.send("0")
-            self.logger.info("RECV: %s" % data)
-            self.pubsocket.send(data)
+            self.logger.info("RECV: %s" % event)
+            self.pubsocket.send_pyobj(event)
 
 
 class EventSubscriber(Server):
     """
     Subscriber server. this server will receive the event using SUB socket.
-    also push the events.
     """
     _sub_port = "11113"
-    _pull_port = "22222"
-    _push_port = "22223"
 
     _default_ip = "127.0.0.1"
-
-    # {"event": [("project.event.handler", "project path")]
-    _register = {}
 
     def __init__(self, *args, **kwargs):
         super(EventSubscriber, self).__init__(*args, **kwargs)
@@ -138,29 +146,15 @@ class EventSubscriber(Server):
         self._establish_subscriber()
         self.queue = Queue()
 
-    def worker(self):
-        """
-        Get a task from queue and process it.
-        """
-        while True:
-            task = self.queue.get()
-            self.process(task)
-            self.queue.task_done()
-
-    def process(self, task):
-        print "  --- PROCESS ---  "
-
     def run(self):
         """
         Main method that is responsible for server run.
         """
-
-        self.logger.info("Workers spawned.")
         while True:
             self.logger.debug("Entering event receiveing loop")
-            data = self.subsocket.recv()
-            self.logger.info("EVENT RECV: %s" % data)
-            self.queue.put(data)
+            event = self.subsocket.recv_pyobj()
+            self.logger.info("EVENT RECV: %s" % event)
+            self.queue.put(event)
 
     def _establish_subscriber(self):
         """
@@ -168,5 +162,27 @@ class EventSubscriber(Server):
         """
         self.subsocket = self.context.socket(zmq.SUB)
         port = self.config.get("sub_port", self._sub_port)
-        self.subsocket.connect(self._address(port))
+
+        if self.secure:
+            zmq.ssh.tunnel_connection(self.subsocket,
+                                      self._address(port),
+                                      self._ssh_server(),
+                                      keyfile=self.config.get("ssh_key",
+                                                              None),
+                                      password=self.config.get("ssh_pass",
+                                                               None),
+                                      timeout=self.config.get("ssh_time_out",
+                                                           120))
+        else:
+            self.subsocket.connect(self._address(port))
+
         self.subsocket.setsockopt(zmq.SUBSCRIBE, "")
+
+    def _ssh_server(self):
+        """
+        Return the ssh server url.
+        """
+        host = self.config.get("host", "127.0.0.1")
+        user = self.config.get("ssh_user", "vakhshour")
+        ssh_port = self.config.get("ssh_port", "22")
+        return "%s@%s:%s" % (user, host, ssh_port)

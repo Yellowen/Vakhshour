@@ -80,22 +80,22 @@ class Packet(object):
         self._data[name] = value
 
 
-class Event(Packet):
-    """
-    This class represent a web event and act as a client for vakhshour.
-    You can use this class to send events.
-    """
+## class Event(Packet):
+##     """
+##     This class represent a web event and act as a client for vakhshour.
+##     You can use this class to send events.
+##     """
 
-    def __init__(self, name=None, sender=None,
-                 data=None, **kwargs):
-        if data:
-            super(Event, self).__init__(data)
-        else:
-            a = {"name": name,
-                 "params": kwargs,
-                 "sender": sender,
-                 }
-            super(Event, self).__init__(a)
+##     def __init__(self, name=None, sender=None,
+##                  data=None, **kwargs):
+##         if data:
+##             super(Event, self).__init__(data)
+##         else:
+##             a = {"name": name,
+##                  "params": kwargs,
+##                  "sender": sender,
+##                  }
+##             super(Event, self).__init__(a)
 
 
 class Node(object):
@@ -104,20 +104,79 @@ class Node(object):
     Events.
     """
 
-    def __init__(self, ip="127.0.0.1", pushport="11111", pullport="11112"):
+    def __init__(self, host="127.0.0.1", pushport="11111", pullport="11112",
+                 secure=False, ssh_user="vakhshour", timeout=120,
+                 ssh_key=None, ssh_pass=None, ssh_port="22"):
+
         self.push = zmq.Context().socket(zmq.PUSH)
         self.pull = zmq.Context().socket(zmq.PULL)
 
-        self.ip = ip
+        self.host = host
         self.pushport = pushport
         self.pullport = pullport
+        self.secure = secure
+
+        self.ssh_user = ssh_user
+        self.ssh_pass = ssh_pass
+        self.ssh_port = ssh_port
+        self.ssh_key = ssh_key
+        self.timeout = timeout
+
+        if secure:
+            self.push_url = "ipc:///tmp/vakhshour.push"
+            self.pull_url = "ipc:///tmp/vakhshour.pull"
+        else:
+            self.push_url = "tcp://%s:%s" % (host, pushport)
+            self.pull_url = "tcp://%s:%s" % (host, pullport)
 
     def send(self, data):
-        self.push.connect("tcp://%s:%s" % (self.ip, self.pushport))
-        self.pull.connect("tcp://%s:%s" % (self.ip, self.pullport))
+        if self.secure:
+            zmq.ssh.tunnel_connection(self.push,
+                                      self.push_url,
+                                      "%s@%s:%s" % (self.ssh_user,
+                                                    self.host,
+                                                    self.ssh_port),
+                                      keyfile=self.ssh_key,
+                                      password=self.ssh_pass,
+                                      timeout=self.timeout)
+            zmq.ssh.tunnel_connection(self.pull,
+                                      self.pull_url,
+                                      "%s@%s:%s" % (self.ssh_user,
+                                                    self.host,
+                                                    self.ssh_port),
+                                      keyfile=self.ssh_key,
+                                      password=self.ssh_pass,
+                                      timeout=self.timeout)
+        else:
+            self.push.connect("tcp://%s:%s" % (self.host, self.pushport))
+            self.pull.connect("tcp://%s:%s" % (self.host, self.pullport))
 
         print "Send Event: %s" % unicode(data)
-        self.push.send_unicode(unicode(data))
+        self.push.send_pyobj(data)
         print "1"
-        response = self.pull.recv()
-        return int(response)
+        response = self.pull.recv_pyobj()
+        return response
+
+
+class Event(object):
+    """
+    Event class. Vakhshour send this object to other nodes.
+    """
+    def __init__(self, name, sender, **kwargs):
+
+        import datetime
+
+        self.name = name
+        self.sender = sender
+        self.kwargs = kwargs
+        self.create_time = datetime.datetime.now()
+
+    def __unicode__(self):
+        return u"'%s' event on '%s' at '%s')" % (self.name,
+                                                self.sender,
+                                                self.create_time)
+
+    def __str__(self):
+        return "'%s' event on '%s' at '%s')" % (self.name,
+                                                self.sender,
+                                                self.create_time)
