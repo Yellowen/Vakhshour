@@ -52,6 +52,7 @@ class EventTransportClient(protocol.Protocol, VObject):
         if response.status == 0:
             self.transport.loseConnection()
             reactor.stop()
+
         else:
             raise self.EventNotSent(
                 "Event Not sent becuase: '%s'" % response.body)
@@ -72,6 +73,12 @@ class EventTransportFactoryClient(protocol.ClientFactory):
     def buildProtocol(self, addr):
         p = self.protocol(self.event)
         return p
+
+    def clientConnectionFailed(self, connector, reason):
+        reactor.stop()
+
+    def clientConnectionLost(self, connector, reason):
+        reactor.stop()
 
 
 class EventTransport(protocol.Protocol, VObject):
