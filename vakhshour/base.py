@@ -17,12 +17,13 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
 
-import zmq
 import json
 import hashlib
 import logging
+from threading import Thread
 
 from argparse import ArgumentParser
+from twisted.internet import reactor
 
 
 class VObject(object):
@@ -33,129 +34,31 @@ class VObject(object):
     logger = logging.getLogger("vakhshour")
 
 
-class Packet(object):
-
-    _data = {"data": None,
-             "hash": None}
-
-    def __init__(self, data):
-        if isinstance(data, basestring):
-            self._data = json.loads(data)
-        else:
-            self._data["data"] = data
-
-    def _gen_hash(self, key):
-        m = hashlib.sha1()
-        m.update(unicode(self._data["data"]) + key)
-        return m.hexdigest()
-
-    def sign(self, key):
-        """
-        Sign a packet and add the corresponding checksum.
-        """
-        self._data["hash"] = self._gen_hash(key)
-        return self._data["hash"]
-
-    def is_valid(self, key):
-        hash_ = self._gen_hash(key)
-        if self._data["hash"] == hash_:
-            return True
-        else:
-            return False
-
-    def __unicode__(self):
-        return json.dumps(self._data)
-
-    def __str__(self):
-        return self.__unicode__()
-
-    def __getattr__(self, name):
-        if name in self._data["data"]:
-            return self._data["data"][name]
-        else:
-            raise AttributeError(
-                "'Packet' object has no attribute '%s'" % name)
-
-    def __setattr__(self, name, value):
-        self._data[name] = value
-
-
-## class Event(Packet):
-##     """
-##     This class represent a web event and act as a client for vakhshour.
-##     You can use this class to send events.
-##     """
-
-##     def __init__(self, name=None, sender=None,
-##                  data=None, **kwargs):
-##         if data:
-##             super(Event, self).__init__(data)
-##         else:
-##             a = {"name": name,
-##                  "params": kwargs,
-##                  "sender": sender,
-##                  }
-##             super(Event, self).__init__(a)
-
-
-class Node(object):
+class Node(Thread):
     """
     This Class represent a network node. You should use it to send
     Events.
     """
 
-    def __init__(self, host="127.0.0.1", pushport="11111", pullport="11112",
-                 secure=False, ssh_user="vakhshour", timeout=120,
-                 ssh_key=None, ssh_pass=None, ssh_port="22"):
+    def __init__(self, host="127.0.0.1", port="8888",
+                 secure=False, ssl_key=None, *args, **kwargs):
 
-        self.push = zmq.Context().socket(zmq.PUSH)
-        self.pull = zmq.Context().socket(zmq.PULL)
-
+        super(Node, self).__init__(*args, **kwargs)
         self.host = host
-        self.pushport = pushport
-        self.pullport = pullport
+        self.port = port
         self.secure = secure
-
-        self.ssh_user = ssh_user
-        self.ssh_pass = ssh_pass
-        self.ssh_port = ssh_port
-        self.ssh_key = ssh_key
-        self.timeout = timeout
-
-        if secure:
-            self.push_url = "ipc:///tmp/vakhshour.push"
-            self.pull_url = "ipc:///tmp/vakhshour.pull"
-        else:
-            self.push_url = "tcp://%s:%s" % (host, pushport)
-            self.pull_url = "tcp://%s:%s" % (host, pullport)
+        self.ssl_key = ssl_key
 
     def send(self, data):
-        if self.secure:
-            zmq.ssh.tunnel_connection(self.push,
-                                      self.push_url,
-                                      "%s@%s:%s" % (self.ssh_user,
-                                                    self.host,
-                                                    self.ssh_port),
-                                      keyfile=self.ssh_key,
-                                      password=self.ssh_pass,
-                                      timeout=self.timeout)
-            zmq.ssh.tunnel_connection(self.pull,
-                                      self.pull_url,
-                                      "%s@%s:%s" % (self.ssh_user,
-                                                    self.host,
-                                                    self.ssh_port),
-                                      keyfile=self.ssh_key,
-                                      password=self.ssh_pass,
-                                      timeout=self.timeout)
-        else:
-            self.push.connect("tcp://%s:%s" % (self.host, self.pushport))
-            self.pull.connect("tcp://%s:%s" % (self.host, self.pullport))
+        from protocols import EventTransportFactoryClient
 
-        print "Send Event: %s" % unicode(data)
-        self.push.send_pyobj(data)
-        print "1"
-        response = self.pull.recv_pyobj()
-        return response
+        self.factory = EventTransportFactoryClient(data)
+
+        if self.secure:
+            pass
+        else:
+            reactor.connectTCP(self.host, int(self.port), self.factory)
+            reactor.run()
 
 
 class Event(object):
@@ -180,3 +83,30 @@ class Event(object):
         return "'%s' event on '%s' at '%s')" % (self.name,
                                                 self.sender,
                                                 self.create_time)
+
+
+class Response(object):
+    """
+    Response Object.
+    """
+    def __init__(self, status, body):
+        self.status = status
+        self.body = body
+
+    def __unicode__(self):
+        return u"Reponse: %s: %s" % (self.status,
+                                     self.body)
+
+    def __str__(self):
+        return "Reponse: %s: %s" % (self.status,
+                                     self.body)
+
+
+class EventReceived(Response):
+    """
+    This is a response to a successful event registeration.
+    """
+    def __init__(self):
+        body = "0"
+        super(EventReceived, self).__init__(status=0,
+                                            body=body)

@@ -22,7 +22,7 @@ import logging
 
 from argparse import ArgumentParser
 
-from servers import EventPublisher, EventSubscriber
+from servers import PublisherServer
 
 
 class Vakhshour(object):
@@ -44,13 +44,6 @@ class Vakhshour(object):
         """
         self.parser = ArgumentParser(
             description=self.DESC)
-
-        self.parser.add_argument("-M", "--Master",
-                            action="store_true",
-                            default=False,
-                            dest="master",
-                            help="Run daemon in Master moode (look at docs)"
-                            )
 
         self.parser.add_argument("-d", "--debug",
                                  action="store_true",
@@ -112,11 +105,8 @@ class Vakhshour(object):
 
     def run(self):
         self.logger.info("Hi Vakhshour is here.")
-        if self.args.master:
 
-            app = EventPublisher(config=self.config)
-        else:
-            app = EventSubscriber(config=self.config)
+        app = PublisherServer(config=self.config)
 
         try:
             app.run()

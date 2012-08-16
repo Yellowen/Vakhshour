@@ -1,9 +1,0 @@
-{
-    "host": "127.0.0.1",
-    "ssh_user": "vakhshour",
-    "ssh_port": "22",
-    "ssh_key": null,
-    "ssh_pass": null,
-    "secure": true
-}
-
