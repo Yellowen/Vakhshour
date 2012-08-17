@@ -22,8 +22,10 @@ import hashlib
 import logging
 from threading import Thread
 
+from OpenSSL import SSL
+
 from argparse import ArgumentParser
-from twisted.internet import reactor
+from twisted.internet import reactor, ssl
 
 
 class VObject(object):
@@ -34,20 +36,37 @@ class VObject(object):
     logger = logging.getLogger("vakhshour")
 
 
-class Node(Thread):
+class CtxFactory(ssl.ClientContextFactory):
+
+    def __init__(self, key, cert):
+        self.key = key
+        self.cert = cert
+
+    def getContext(self):
+        self.method = SSL.SSLv23_METHOD
+        ctx = ssl.ClientContextFactory.getContext(self)
+        ctx.use_certificate_file(self.cert)
+        ctx.use_privatekey_file(self.key)
+
+        return ctx
+
+
+class Node(object):
     """
     This Class represent a network node. You should use it to send
     Events.
     """
 
     def __init__(self, host="127.0.0.1", port="8888",
-                 secure=False, ssl_key=None, *args, **kwargs):
+                 secure=False, ssl_key=None, ssl_cert=None,
+                 *args, **kwargs):
 
         super(Node, self).__init__(*args, **kwargs)
         self.host = host
         self.port = port
         self.secure = secure
         self.ssl_key = ssl_key
+        self.ssl_cert = ssl_cert
 
     def send(self, data):
         from protocols import EventTransportFactoryClient
@@ -55,10 +74,14 @@ class Node(Thread):
         self.factory = EventTransportFactoryClient(data)
 
         if self.secure:
-            pass
+            reactor.connectSSL(self.host,
+                               int(self.port),
+                               self.factory,
+                               CtxFactory(self.ssl_key,
+                                          self.ssl_cert))
         else:
             reactor.connectTCP(self.host, int(self.port), self.factory)
-            reactor.run()
+        reactor.run()
 
 
 class Event(object):

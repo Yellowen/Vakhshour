@@ -25,6 +25,34 @@ from base import VObject, Event
 from protocols import EventTransportFactory, EventPublisherFactory
 
 
+class SSLFactory(ssl.DefaultOpenSSLContextFactory, VObject):
+
+    cacert = None
+
+    def getContext(self):
+
+        x = self._context
+
+        x.set_verify(
+            SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
+            self.verify_cert,
+            )
+
+        # Since we have self-signed certs we have to explicitly
+        # tell the server to trust them.
+        x.load_verify_locations(self.cacert)
+        return x
+
+    def verify_cert(self, connection, x509, errnum, errdepth, ok):
+        if not ok:
+            self.logger.error(
+                'invalid cert from subject: %s' % x509.get_subject())
+            return False
+        else:
+            self.logger.info("Cert is fine.")
+            return True
+
+
 class PublisherServer(VObject):
 
     def __init__(self, config={}, host="127.0.0.1", pub_port="7777",
@@ -44,54 +72,41 @@ class PublisherServer(VObject):
         self.event_receiver = EventTransportFactory(self.publisher)
 
         if self.secure:
-            ContextFactory = ssl.DefaultOpenSSLContextFactory(self.key,
-                                                              self.cert)
 
-            ctx = ContextFactory.getContext()
+            self.logger.info("SSL KEY: %s" % self.key)
+            self.logger.info("SSL CERT: %s" % self.cert)
+            self.logger.info("CA CERT: %s" % self.cacert)
 
-            ctx.set_verify(
-                SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
-                self.verify_cert,
-            )
-
-            # Since we have self-signed certs we have to explicitly
-            # tell the server to trust them.
-            ctx.load_verify_locations(self.cacert)
+            context_factory = SSLFactory(self.key,
+                                         self.cert)
+            context_factory.cacert = self.cacert
 
             reactor.listenSSL(
                 int(self.recvport),
                 self.event_receiver,
-                ContextFactory)
+                context_factory)
 
             reactor.listenSSL(
                 int(self.pubport),
                 self.publisher,
-                ContextFactory)
+                context_factory)
         else:
-            reactor.listenTCP(int(pub_port),
+            reactor.listenTCP(int(self.pubport),
                               self.publisher)
-            reactor.listenTCP(int(recv_port),
+            reactor.listenTCP(int(self.recvport),
                               self.event_receiver)
 
     def run(self):
         if self.secure:
-            pass
+            self.logger.info("Running in secure mode...")
         else:
             self.logger.info("Running in non-secure mode...")
-            self.logger.info("Event Publisher URL: tcp://%s:%s" % (
-                self.host,
-                self.pubport))
-            self.logger.info("Event Receiver URL: tcp://%s:%s" % (
-                self.host,
-                self.recvport))
+
+        self.logger.info("Event Publisher URL: tcp://%s:%s" % (
+            self.host,
+            self.pubport))
+        self.logger.info("Event Receiver URL: tcp://%s:%s" % (
+            self.host,
+            self.recvport))
 
         reactor.run()
-
-    def verify_cert(self, connection, x509, errnum, errdepth, ok):
-        if not ok:
-            self.logger.error(
-                'invalid cert from subject: %s' % x509.get_subject())
-            return False
-        else:
-            self.logger.info("Cert is fine.")
-            return True

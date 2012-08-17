@@ -1,0 +1,9 @@
+Vakhshour
+=========
+
+Event Layer and Message layer application.
+
+
+Requirements:
+	pyOpenSSL
+	Twisted

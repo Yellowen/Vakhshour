@@ -1,5 +1,10 @@
 {
     "host": "0.0.0.0",
-    "secure": false
+    "publisher_port": "7777",
+    "receiver_port": "8888",
+    "ssl_key": "/home/lxsameer/src/Vakhshour/keys/vakhshour.key",
+    "ssl_cert": "/home/lxsameer/src/Vakhshour/keys/vakhshour.crt",
+    "ca_cert": "/home/lxsameer/src/Vakhshour/keys/ca.crt",
+    "secure": true
 }
 
