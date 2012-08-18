@@ -167,3 +167,42 @@ class EventPublisherFactory(protocol.Factory, VObject):
         for c in self.clients:
             self.logger.info("Publish: %s" % data)
             c.transport.write(data)
+
+
+class Subscribe(protocol.Protocol, VObject):
+    """
+    Event Subscribe Protocol.
+
+    Main protocol to receiving events
+    """
+    def __init__(self, queue):
+        self.queue = queue
+
+    def dataReceived(self, data):
+        """
+        This function called when a an event received.
+        """
+        try:
+            event = cPickle.loads(data)
+        except:
+            raise
+
+        print ">>> ", event
+        self.queue.put(event)
+
+    class EventNotSent(Exception):
+        pass
+
+
+class SubscribeFactory(protocol.ClientFactory):
+    """
+    Event transport factory. reponsible for received Events.
+    """
+    protocol = Subscribe
+
+    def __init__(self, queue):
+        self.queue = queue
+
+    def buildProtocol(self, addr):
+        p = self.protocol(self.queue)
+        return p
