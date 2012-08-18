@@ -7,3 +7,32 @@ Event Layer and Message layer application.
 Requirements:
 	pyOpenSSL
 	Twisted
+
+Usage:
+======
+
+1. Running master server:
+
+   Running the master server is very easy:
+   
+   $ vakhshourd
+
+   'vakhshourd' use the '/etc/vakhshour/vakhshour.json' as its configuration file.
+   Take a look at configurations comments.
+   Take a look at the --help parameter of 'vakhshourd'.
+
+2. Sending Events:
+
+   Here is a sample code:
+
+
+   from vakhshour.base import Node, Event
+
+   a = Node(host="x.x.x.", port="8888")
+
+   event = Event(name="logout", sender="someservice",
+   	   			user="lxsameer")
+   a.send(event)
+
+
+   NOTE: user parameter for Event class is a logout event parameter.
