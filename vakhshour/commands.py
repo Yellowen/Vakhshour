@@ -29,14 +29,10 @@ class Json(Unicode):
     Json argument type.
     """
     def toString(self, inObject):
-        # assert isinstance(inObject, unicode)
-        return json.dumps(
-            String.toString(self, inObject.encode('utf-8')))
+        return json.dumps(inObject).encode('utf-8')
 
     def fromString(self, inString):
-        # assert isinstance(inString, str)
-        return json.loads(
-            String.fromString(self, inString).decode('utf-8'))
+        return json.loads(inString.decode('utf-8'))
 
 
 class Event(Command):

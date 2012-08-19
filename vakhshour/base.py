@@ -26,7 +26,8 @@ from OpenSSL import SSL
 
 from argparse import ArgumentParser
 from twisted.internet import reactor, ssl, defer
-from twisted.internet.protocol import ClientCreator, amp
+from twisted.internet.protocol import ClientCreator
+from twisted.protocols import amp
 
 
 class VObject(object):
@@ -72,19 +73,29 @@ class Node(object):
         self.client = ClientCreator(reactor, amp.AMP)
 
     def send(self, name, sender, **kwargs):
-
+        """
+        Send an Event with the given parameter to the Vakhshour
+        main server.
+        """
         from commands import Event
         
         if self.secure:
-            connection = self.cllient.connectSSL(self.host,
+            connection = self.client.connectSSL(self.host,
                                                  int(self.port),
                                                  CtxFactory(self.ssl_key,
                                                             self.ssl_cert))
         else:
             connection = self.client.connectTCP(self.host, int(self.port))
 
-        connection.addCallback(lambda x: x.callRemote(name=name,
+        connection.addCallback(lambda x: x.callRemote(Event, name=name,
                                                       sender=sender,
-                                                      kwargs))
-
+                                                      kwargs=kwargs)
+                               ).addCallback(self._done)
         reactor.run()
+
+    def _done(self, x):
+        """
+        This method will called when the answer of event received.
+        We don't care about the answer just closing the reactor.
+        """
+        reactor.stop()

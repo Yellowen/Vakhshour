@@ -22,14 +22,14 @@ from twisted.internet import protocol, reactor
 from twisted.protocols.amp import AMP
 
 from base import VObject
-
+from commands import Event
 
 
 class EventProtocol(AMP, VObject):
 
     def __init__(self, publisher, *args, **kwargs):
         self.publisher = publisher
-        super(EventFactory, self).__init__(*args, **kwargs)
+        super(EventProtocol, self).__init__(*args, **kwargs)
 
     @Event.responder
     def event_responser(self, name, sender, kwargs):
@@ -94,8 +94,9 @@ class EventPublisherFactory(protocol.Factory, VObject):
         p = self.protocol(self)
         return p
 
-    def send(self, data):
+    def send(self, **kwargs):
         for c in self.clients:
+            data = json.dumps(kwargs)
             self.logger.info("Publish: %s" % data)
             c.transport.write(data)
 
