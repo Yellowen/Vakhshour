@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
-import cPickle
+import json
 
 from twisted.internet import protocol, reactor
 from twisted.protocols.amp import AMP
@@ -107,20 +107,16 @@ class Subscribe(protocol.Protocol, VObject):
 
     Main protocol to receiving events
     """
-    def __init__(self, queue):
-        self.queue = queue
-
     def dataReceived(self, data):
         """
         This function called when a an event received.
         """
         try:
-            event = cPickle.loads(data)
+            event = json.loads(data)
         except:
             raise
 
         print ">>> ", event
-        self.queue.put(event)
 
     class EventNotSent(Exception):
         pass
@@ -132,9 +128,6 @@ class SubscribeFactory(protocol.ClientFactory):
     """
     protocol = Subscribe
 
-    def __init__(self, queue):
-        self.queue = queue
-
     def buildProtocol(self, addr):
-        p = self.protocol(self.queue)
+        p = self.protocol()
         return p

@@ -16,7 +16,6 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
-import cPickle
 from Queue import Queue
 from OpenSSL import SSL
 
@@ -56,8 +55,7 @@ class Subscriber(VObject):
         self.port = port
         self.key = ssl_key
         self.cert = ssl_cert
-        self.queue = Queue()
-        self.factory = SubscribeFactory(self.queue)
+        self.factory = SubscribeFactory()
 
     def run(self):
         self.logger.info("Connecting to tcp://%s:%s" % (self.host,
