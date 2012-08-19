@@ -19,108 +19,39 @@
 import cPickle
 
 from twisted.internet import protocol, reactor
+from twisted.protocols.amp import AMP
 
-from base import VObject, Event, EventReceived
-
-
-class EventTransportClient(protocol.Protocol, VObject):
-    """
-    Event Transport Protocol.
-
-    Main protocol to sending events
-    """
-    def __init__(self, event):
-        self.event = event
-
-    def connectionMade(self):
-        try:
-            new_data = cPickle.dumps(self.event)
-        except:
-            raise
-
-        self.transport.write(new_data)
-
-    def dataReceived(self, data):
-        """
-        This function called when a client send an event to vakhshour.
-        """
-        try:
-            response = cPickle.loads(data)
-        except:
-            raise
-
-        if response.status == 0:
-            self.transport.loseConnection()
-
-            reactor.stop()
-
-        else:
-            reactor.stop()
-            raise self.EventNotSent(
-                "Event Not sent becuase: '%s'" % response.body)
-
-    class EventNotSent(Exception):
-        pass
+from base import VObject
 
 
-class EventTransportFactoryClient(protocol.ClientFactory):
+
+class EventProtocol(AMP, VObject):
+
+    def __init__(self, publisher, *args, **kwargs):
+        self.publisher = publisher
+        super(EventFactory, self).__init__(*args, **kwargs)
+
+    @Event.responder
+    def event_responser(self, name, sender, kwargs):
+        params = {"name": name, "sender": sender}
+
+        params.update(kwargs)
+
+        self.logger.info("PARAMS: %s" % unicode(params))
+        self.publisher.send(**params)
+
+        return {"status": 0}
+
+
+
+class EventFactory(protocol.Factory):
     """
     Event transport factory. reponsible for received Events.
     """
-    protocol = EventTransportClient
-
-    def __init__(self, event):
-        self.event = event
-
-    def buildProtocol(self, addr):
-        p = self.protocol(self.event)
-        return p
-
-    def clientConnectionFailed(self, connector, reason):
-        reactor.stop()
-
-
-class EventTransport(protocol.Protocol, VObject):
-    """
-    Event Transport Protocol.
-
-    This protocol class is in charge of receiving Events from clients.
-    Note: Clients are applications that use Vakhshour as event passing service.
-    """
-    def __init__(self, sender_factory):
-        """
-        sender_factory: the Factory object that is responsible for publishing
-        events.
-        """
-        self.sender = sender_factory
-
-    def dataReceived(self, data):
-        """
-        This function called when a client send an event to vakhshour.
-        """
-        try:
-            obj = cPickle.loads(data)
-        except:
-            raise
-
-        # Send the received data to publishing
-        self.sender.send(data)
-
-        try:
-            obj = cPickle.dumps(EventReceived())
-        except:
-            raise
-
-        self.transport.write(obj)
-
-
-class EventTransportFactory(protocol.Factory):
-    """
-    Event transport factory. reponsible for received Events.
-    """
-    protocol = EventTransport
+    protocol = EventProtocol
 
     def __init__(self, sender_factory):
+
         self.sender = sender_factory
 
     def buildProtocol(self, addr):

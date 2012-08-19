@@ -18,11 +18,12 @@
 # -----------------------------------------------------------------------------
 import logging
 from OpenSSL import SSL
+from Queue import Queue
 
 from twisted.internet import reactor, ssl
 
-from base import VObject, Event
-from protocols import EventTransportFactory, EventPublisherFactory
+from base import VObject
+from protocols import EventPublisherFactory, EventFactory
 
 
 class SSLFactory(ssl.DefaultOpenSSLContextFactory, VObject):
@@ -67,9 +68,10 @@ class PublisherServer(VObject):
         self.key = self.config.get("ssl_key", sslkey)
         self.cert = self.config.get("ssl_cert", sslcert)
         self.cacert = self.config.get("ca_cert", cacert)
+        self.webapps = self.config.get("webapps", [])
 
         self.publisher = EventPublisherFactory()
-        self.event_receiver = EventTransportFactory(self.publisher)
+        self.event_receiver = EventFactory(self.publisher)
 
         if self.secure:
 
