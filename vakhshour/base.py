@@ -25,9 +25,11 @@ from threading import Thread
 from OpenSSL import SSL
 
 from argparse import ArgumentParser
-from twisted.internet import reactor, ssl, defer
+from twisted.internet import ssl, defer
 from twisted.internet.protocol import ClientCreator
 from twisted.protocols import amp
+
+from amp import ampy
 
 
 class VObject(object):
@@ -52,50 +54,61 @@ class CtxFactory(ssl.ClientContextFactory):
 
         return ctx
 
-
 class Node(object):
-    """
-    This Class represent a network node. You should use it to send
-    Events.
-    """
-
     def __init__(self, host="127.0.0.1", port="8888",
                  secure=False, ssl_key=None, ssl_cert=None,
+                 expect_answer=False,
                  *args, **kwargs):
-
+        
         super(Node, self).__init__(*args, **kwargs)
         self.host = host
         self.port = port
         self.secure = secure
         self.ssl_key = ssl_key
         self.ssl_cert = ssl_cert
+        self.expect_answer = expect_answer
 
-        self.client = ClientCreator(reactor, amp.AMP)
+    def send_event(self, name, sender, **kwargs):
+        proxy = ampy.Proxy(self.host, int(self.port), self.secure,
+                           ssl_key=self.ssl_key,
+                           ssl_cert = self.ssl_cert).connect()
 
-    def send(self, name, sender, **kwargs):
-        """
-        Send an Event with the given parameter to the Vakhshour
-        main server.
-        """
-        from commands import Event
-        
-        if self.secure:
-            connection = self.client.connectSSL(self.host,
-                                                 int(self.port),
-                                                 CtxFactory(self.ssl_key,
-                                                            self.ssl_cert))
+        if self.expect_answer:
+            response = proxy.callRemote(self.Event, name=name,
+                                        sender=sender,
+                                        kwargs=kwargs)
+            responses = {}
+            for k, v in response.items():
+                responses[k] = v
+            return responses
         else:
-            connection = self.client.connectTCP(self.host, int(self.port))
+            proxy.callRemote(self.Event, name=name,
+                             sender=sender,
+                             kwargs=kwargs)
+            return {}
 
-        connection.addCallback(lambda x: x.callRemote(Event, name=name,
-                                                      sender=sender,
-                                                      kwargs=kwargs)
-                               ).addCallback(self._done)
-        reactor.run()
+    class Event(ampy.Command):
 
-    def _done(self, x):
-        """
-        This method will called when the answer of event received.
-        We don't care about the answer just closing the reactor.
-        """
-        reactor.stop()
+        class Json(ampy.Unicode):
+            """
+            Json argument type.
+            """
+            def toString(self, inObject):
+                return json.dumps(inObject).encode('utf-8')
+
+            def fromString(self, inString):
+                return json.loads(inString.decode('utf-8'))
+
+        commandName = "Event"
+
+        arguments = [('name', ampy.Unicode()),
+                     ('sender', ampy.String()),
+                     ("kwargs", Json()),
+                     ]
+
+        response = [('status', ampy.Integer())]
+
+        def deserializeResponse(cls, wireResponse):
+            return wireResponse
+        deserializeResponse = classmethod(deserializeResponse)
+
