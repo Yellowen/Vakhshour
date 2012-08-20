@@ -1,8 +1,18 @@
 # -*- test-case-name: twisted.test.test_reflect -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
+# Copyright (c) 2006 Eric P. Mangold
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
+# These changes made by <lxsameer>:
+# Restyling code to be fit to pep8
+# SSL Support
 
 """
 Standardized versions of various cool and/or strange things that you can do
@@ -36,6 +46,7 @@ try:
 except ImportError:
     import StringIO
 
+
 class Settable:
     """
     A mixin class for syntactic sugar.  Lets you assign attributes by
@@ -47,9 +58,9 @@ class Settable:
     def __init__(self, **kw):
         self(**kw)
 
-    def __call__(self,**kw):
-        for key,val in kw.items():
-            setattr(self,key,val)
+    def __call__(self, **kw):
+        for key, val in kw.items():
+            setattr(self, key, val)
         return self
 
 
@@ -90,17 +101,18 @@ class AccessorType(type):
             if getter is None:
                 if hasattr(self, name):
                     value = getattr(self, name)
+
                     def getter(this, value=value, name=name):
-                        if this.__dict__.has_key(name):
+                        if name in this.__dict__:
                             return this.__dict__[name]
                         else:
                             return value
                 else:
                     def getter(this, name=name):
-                        if this.__dict__.has_key(name):
+                        if name in this.__dict__:
                             return this.__dict__[name]
                         else:
-                            raise AttributeError, "no such attribute %r" % name
+                            raise AttributeError("no such attribute %r" % name)
             if setter is None:
                 def setter(this, value, name=name):
                     this.__dict__[name] = value
@@ -159,27 +171,29 @@ class Accessor:
     This implementation is for Python 2.1.
     """
 
-    def __setattr__(self, k,v):
-        kstring='set_%s'%k
-        if hasattr(self.__class__,kstring):
-            return getattr(self,kstring)(v)
+    def __setattr__(self, k, v):
+        kstring = 'set_%s' % k
+        if hasattr(self.__class__, kstring):
+            return getattr(self, kstring)(v)
         else:
-            self.reallySet(k,v)
+            self.reallySet(k, v)
 
     def __getattr__(self, k):
-        kstring='get_%s'%k
-        if hasattr(self.__class__,kstring):
-            return getattr(self,kstring)()
-        raise AttributeError("%s instance has no accessor for: %s" % (qual(self.__class__),k))
+        kstring = 'get_%s' % k
+        if hasattr(self.__class__, kstring):
+            return getattr(self, kstring)()
+        raise AttributeError(
+            "%s instance has no accessor for: %s" % (qual(self.__class__),
+                                                     k))
 
     def __delattr__(self, k):
-        kstring='del_%s'%k
-        if hasattr(self.__class__,kstring):
-            getattr(self,kstring)()
+        kstring = 'del_%s' % k
+        if hasattr(self.__class__, kstring):
+            getattr(self, kstring)()
             return
         self.reallyDel(k)
 
-    def reallySet(self, k,v):
+    def reallySet(self, k, v):
         """
         *actually* set self.k to v without incurring side-effects.
         This is a hook to be overridden by subclasses.
@@ -188,7 +202,7 @@ class Accessor:
             self.__dict__.clear()
             self.__dict__.update(v)
         else:
-            self.__dict__[k]=v
+            self.__dict__[k] = v
 
     def reallyDel(self, k):
         """
@@ -214,40 +228,45 @@ class Summer(Accessor):
     incremented, similiarly for the debit versions.
     """
 
-    def reallySet(self, k,v):
+    def reallySet(self, k, v):
         "This method does the work."
         for sum in self.sums:
-            attr=sum[0]
-            obj=sum[1]
-            objattr=sum[2]
+            attr = sum[0]
+            obj = sum[1]
+            objattr = sum[2]
             if k == attr:
                 try:
-                    oldval=getattr(self, attr)
+                    oldval = getattr(self, attr)
                 except:
-                    oldval=0
-                diff=v-oldval
+                    oldval = 0
+                diff = v - oldval
                 if hasattr(self, obj):
-                    ob=getattr(self,obj)
+                    ob = getattr(self, obj)
                     if ob is not None:
-                        try:oldobjval=getattr(ob, objattr)
-                        except:oldobjval=0.0
-                        setattr(ob,objattr,oldobjval+diff)
+                        try:
+                            oldobjval = getattr(ob, objattr)
+                        except:
+                            oldobjval = 0.0
+                        setattr(ob, objattr,
+                                oldobjval + diff)
 
             elif k == obj:
                 if hasattr(self, attr):
-                    x=getattr(self,attr)
-                    setattr(self,attr,0)
-                    y=getattr(self,k)
-                    Accessor.reallySet(self,k,v)
-                    setattr(self,attr,x)
-                    Accessor.reallySet(self,y,v)
-        Accessor.reallySet(self,k,v)
+                    x = getattr(self, attr)
+                    setattr(self, attr, 0)
+                    y = getattr(self, k)
+                    Accessor.reallySet(self, k, v)
+                    setattr(self, attr, x)
+                    Accessor.reallySet(self, y, v)
+        Accessor.reallySet(self, k, v)
+
 
 class QueueMethod:
     """ I represent a method that doesn't exist yet."""
     def __init__(self, name, calls):
         self.name = name
         self.calls = calls
+
     def __call__(self, *args):
         self.calls.append((self.name, args))
 
@@ -260,40 +279,45 @@ def funcinfo(function):
         "[v2.5] Use inspect.getargspec instead of twisted.python.reflect.funcinfo",
         DeprecationWarning,
         stacklevel=2)
-    code=function.func_code
-    name=function.func_name
-    argc=code.co_argcount
-    argv=code.co_varnames[:argc]
-    defaults=function.func_defaults
+
+    code = function.func_code
+    name = function.func_name
+    argc = code.co_argcount
+    argv = code.co_varnames[:argc]
+    defaults = function.func_defaults
 
     out = []
 
-    out.append('The function %s accepts %s arguments' % (name ,argc))
+    out.append('The function %s accepts %s arguments' % (name, argc))
     if defaults:
-        required=argc-len(defaults)
+        required = argc - len(defaults)
         out.append('It requires %s arguments' % required)
         out.append('The arguments required are: %s' % argv[:required])
         out.append('additional arguments are:')
-        for i in range(argc-required):
-            j=i+required
-            out.append('%s which has a default of' % (argv[j], defaults[i]))
+        for i in range(argc - required):
+            j = i + required
+            out.append(
+                '%s which has a default of %s' % (argv[j], defaults[i]))
     return out
 
 
-ISNT=0
-WAS=1
-IS=2
+ISNT = 0
+WAS = 1
+IS = 2
 
 
 def fullFuncName(func):
-    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    qualName = (str(pickle.whichmodule(func,
+                                       func.__name__)) + '.' + func.__name__)
     if namedObject(qualName) is not func:
         raise Exception("Couldn't find %s as %s." % (func, qualName))
     return qualName
 
+
 def qual(clazz):
     """Return full import path of a class."""
     return clazz.__module__ + '.' + clazz.__name__
+
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'
@@ -303,6 +327,7 @@ def getcurrent(clazz):
         return clazz
     return currclass
 
+
 def getClass(obj):
     """Return the class or type of object 'obj'.
     Returns sensible result for oldstyle and newstyle instances and types."""
@@ -311,16 +336,18 @@ def getClass(obj):
     else:
         return type(obj)
 
-# class graph nonsense
 
+# class graph nonsense
 # I should really have a better name for this...
-def isinst(inst,clazz):
-    if type(inst) != types.InstanceType or type(clazz)!= types.ClassType:
-        return isinstance(inst,clazz)
+def isinst(inst, clazz):
+    if type(inst) != types.InstanceType or type(clazz) != types.ClassType:
+        return isinstance(inst, clazz)
+
     cl = inst.__class__
     cl2 = getcurrent(cl)
     clazz = getcurrent(clazz)
-    if issubclass(cl2,clazz):
+
+    if issubclass(cl2, clazz):
         if cl == cl2:
             return WAS
         else:
@@ -347,15 +374,14 @@ def namedObject(name):
     module = namedModule(string.join(classSplit[:-1], '.'))
     return getattr(module, classSplit[-1])
 
-namedClass = namedObject # backwards compat
 
+namedClass = namedObject  # backwards compat
 
 
 class _NoModuleFound(Exception):
     """
     No module was found because none exists.
     """
-
 
 
 def _importAndCheckStack(importName):
@@ -379,8 +405,8 @@ def _importAndCheckStack(importName):
             excType, excValue, excTraceback = sys.exc_info()
             while excTraceback:
                 execName = excTraceback.tb_frame.f_globals["__name__"]
-                if (execName is None or # python 2.4+, post-cleanup
-                    execName == importName): # python 2.3, no cleanup
+                if (execName is None or  # python 2.4+, post-cleanup
+                    execName == importName):  # python 2.3, no cleanup
                     raise excType, excValue, excTraceback
                 excTraceback = excTraceback.tb_next
             raise _NoModuleFound()
@@ -388,7 +414,6 @@ def _importAndCheckStack(importName):
         # Necessary for cleaning up modules in 2.3.
         sys.modules.pop(importName, None)
         raise
-
 
 
 def namedAny(name):
@@ -433,12 +458,12 @@ def namedAny(name):
 
     return obj
 
+
 def _reclass(clazz):
-    clazz = getattr(namedModule(clazz.__module__),clazz.__name__)
+    clazz = getattr(namedModule(clazz.__module__),
+                    clazz.__name__)
     clazz.__bases__ = tuple(map(_reclass, clazz.__bases__))
     return clazz
-
-
 
 
 def macro(name, filename, source, **identifiers):
@@ -447,7 +472,7 @@ def macro(name, filename, source, **identifiers):
     This allows you to create macro-like behaviors in python.  See
     twisted.python.hook for an example of its usage.
     """
-    if not identifiers.has_key('name'):
+    if not 'name' in identifiers:
         identifiers['name'] = name
     source = source % identifiers
     codeplace = "<%s (macro)>" % filename
@@ -456,7 +481,7 @@ def macro(name, filename, source, **identifiers):
     # shield your eyes!
     sm = sys.modules
     tprm = "twisted.python.reflect.macros"
-    if not sm.has_key(tprm):
+    if not tprm in sm:
         macros = new.module(tprm)
         sm[tprm] = macros
         macros.count = 0
@@ -479,11 +504,13 @@ def macro(name, filename, source, **identifiers):
     exec code in dict, dict
     return dict[name]
 
+
 def _determineClass(x):
     try:
         return x.__class__
     except:
         return type(x)
+
 
 def _determineClassName(x):
     c = _determineClass(x)
@@ -494,6 +521,7 @@ def _determineClassName(x):
             return str(c)
         except:
             return '<BROKEN CLASS AT %s>' % id(c)
+
 
 def safe_repr(o):
     """safe_repr(anything) -> string
@@ -510,9 +538,10 @@ def safe_repr(o):
         whati = _determineClassName(o)
         swron = io.getvalue()
         gwith = id(o)
-        you ='<%s instance at %s with repr error %s>' % (
-            whati,swron,gwith)
+        you = '<%s instance at %s with repr error %s>' % (
+            whati, swron, gwith)
         return you
+
 
 def safe_str(o):
     """safe_str(anything) -> string
@@ -532,7 +561,6 @@ def safe_str(o):
 
 
 ##the following were factored out of usage
-
 def allYourBase(classObj, baseClass=None):
     """allYourBase(classObj, baseClass=None) -> list of all base
     classes that are subclasses of baseClass, unless it is None,
@@ -580,12 +608,14 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (len(optName))):
                 dict[optName] = 1
 
+
 def prefixedMethods(obj, prefix=''):
     """A list of methods with a given prefix on a given instance.
     """
     dct = {}
     accumulateMethods(obj, dct, prefix)
     return dct.values()
+
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
     """accumulateMethods(instance, dict, prefix)
@@ -605,8 +635,11 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
             and (len(optName))):
             dict[optName] = getattr(obj, name)
 
+
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
+    """
+    Accumulate all attributes of a given name in a class heirarchy into
+    a single dictionary.
 
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
@@ -642,7 +675,9 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single list.
+    """
+    Accumulate all attributes of a given name in a class heirarchy into
+    a single list.
 
     Assuming all class attributes of this name are lists.
     """
@@ -655,11 +690,14 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
 def isSame(a, b):
     return (a is b)
 
+
 def isLike(a, b):
     return (a == b)
 
+
 def modgrep(goal):
     return objgrep(sys.modules, goal, isLike, 'sys.modules')
+
 
 def isOfType(start, goal):
     return ((type(start) is goal) or
@@ -670,7 +708,9 @@ def isOfType(start, goal):
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
+
+def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
+            showUnknowns=0, maxDepth=None):
     '''An insanely CPU-intensive process for finding stuff.
     '''
     if paths is None:
@@ -679,7 +719,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
         seen = {}
     if eq(start, goal):
         paths.append(path)
-    if seen.has_key(id(start)):
+    if id(start) in seen:
         if seen[id(start)] is start:
             return
     if maxDepth is not None:
@@ -690,23 +730,33 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
     if isinstance(start, types.DictionaryType):
         r = []
         for k, v in start.items():
-            objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
-            objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
+            objgrep(k, goal, eq, path + '{' + repr(v) + '}',
+                    paths, seen, showUnknowns, maxDepth)
+            objgrep(v, goal, eq, path + '[' + repr(k) + ']',
+                    paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, (list, tuple, deque)):
         for idx in xrange(len(start)):
-            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen, showUnknowns, maxDepth)
+            objgrep(start[idx], goal, eq, path + '[' + str(idx) + ']',
+                    paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, types.MethodType):
-        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.im_self, goal, eq, path + '.im_self',
+                paths, seen, showUnknowns, maxDepth)
+        objgrep(start.im_func, goal, eq, path + '.im_func',
+                paths, seen, showUnknowns, maxDepth)
+        objgrep(start.im_class, goal, eq, path + '.im_class',
+                paths, seen, showUnknowns, maxDepth)
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
-            objgrep(v, goal, eq, path+'.'+k, paths, seen, showUnknowns, maxDepth)
+            objgrep(v, goal, eq, path + '.' + k,
+                    paths, seen, showUnknowns, maxDepth)
         if isinstance(start, types.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen, showUnknowns, maxDepth)
+            objgrep(start.__class__, goal, eq, path + '.__class__',
+                    paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, weakref.ReferenceType):
-        objgrep(start(), goal, eq, path+'()', paths, seen, showUnknowns, maxDepth)
-    elif (isinstance(start, types.StringTypes+
+        objgrep(start(), goal, eq, path + '()',
+                paths, seen, showUnknowns, maxDepth)
+    elif (isinstance(start,
+                     types.StringTypes +
                     (types.IntType, types.FunctionType,
                      types.BuiltinMethodType, RegexType, types.FloatType,
                      types.NoneType, types.FileType)) or
@@ -741,5 +791,3 @@ def filenameToModuleName(fn):
         else:
             break
     return modName
-
-#boo python

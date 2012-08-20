@@ -1,8 +1,18 @@
 # -*- test-case-name: twisted.test.test_failure -*-
 # See also test suite twisted.test.test_pbfailure
+# Copyright (c) 2006 Eric P. Mangold
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
-# See LICENSE for details.
+# These changes made by <lxsameer>:
+# Restyling code to be fit to pep8
+# SSL Support
 
 
 """
@@ -23,8 +33,10 @@ import reflect
 count = 0
 traceupLength = 4
 
+
 class DefaultException(Exception):
     pass
+
 
 def format_frames(frames, write, detail="default"):
     """Format and write frames.
@@ -40,30 +52,31 @@ def format_frames(frames, write, detail="default"):
     @type detail: string
     """
     if detail not in ('default', 'brief', 'verbose'):
-        raise ValueError, "Detail must be default, brief, or verbose. (not %r)" % (detail,)
+        raise ValueError(
+              "Detail must be default, brief, or verbose. (not %r)" % (detail))
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:
             w('%s:%s:%s\n' % (filename, lineno, method))
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
-            w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
-            w( '    %s\n' % linecache.getline(filename, lineno).strip())
+            w('  File "%s", line %s, in %s\n' % (filename, lineno, method))
+            w('    %s\n' % linecache.getline(filename, lineno).strip())
     elif detail == "verbose":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
             w(' [ Locals ]\n')
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  %s : %s\n" %  (name, repr(val)))
+                w("%s : %s\n" % (name, repr(val)))
             w(' ( Globals )\n')
             for name, val in globalVars:
-                w("  %s : %s\n" %  (name, repr(val)))
+                w("%s : %s\n" % (name, repr(val)))
+
 
 # slyphon: i have a need to check for this value in trial
 #          so I made it a module-level constant
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
-
 
 
 class NoCurrentExceptionError(Exception):
@@ -176,7 +189,7 @@ class Failure:
         elif exc_type is None:
             if isinstance(exc_value, Exception):
                 self.type = exc_value.__class__
-            else: #allow arbitrary objects.
+            else:  # allow arbitrary objects.
                 self.type = type(exc_value)
             self.value = exc_value
         else:
@@ -188,11 +201,6 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-#             else:
-#                 log.msg("Erf, %r created with no traceback, %s %s." % (
-#                     repr(self), repr(exc_value), repr(exc_type)))
-#                 for s in traceback.format_stack():
-#                     log.msg(s)
 
         frames = self.frames = []
         stack = self.stack = []
@@ -231,7 +239,7 @@ class Failure:
             else:
                 globalz = f.f_globals.copy()
             for d in globalz, localz:
-                if d.has_key("__builtins__"):
+                if "__builtins__" in d:
                     del d["__builtins__"]
             stack.insert(0, [
                 f.f_code.co_name,
@@ -250,7 +258,7 @@ class Failure:
             else:
                 globalz = f.f_globals.copy()
             for d in globalz, localz:
-                if d.has_key("__builtins__"):
+                if "__builtins__" in d:
                     del d["__builtins__"]
 
             frames.append([
@@ -310,14 +318,12 @@ class Failure:
                 return error
         return None
 
-
     def raiseException(self):
         """
         raise the original exception, preserving traceback
         information if available.
         """
-        raise self.type, self.value, self.tb
-
+        raise self.type(self.value, self.tb)
 
     def throwExceptionIntoGenerator(self, g):
         """
@@ -329,7 +335,6 @@ class Failure:
         @raise anything else: Anything that the generator raises.
         """
         return g.throw(self.type, self.value, self.tb)
-
 
     def _findFailure(cls):
         """
@@ -365,7 +370,8 @@ class Failure:
         # throwExceptionIntoGenerator if the bottom of the traceback
         # is a yield.
         # Pyrex and Cython extensions create traceback frames
-        # with no co_code, but they can't yield so we know it's okay to just return here.
+        # with no co_code, but they can't yield so we know it's okay to
+        # just return here.
         if ((not lastFrame.f_code.co_code) or
             lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode):
             return
@@ -462,20 +468,25 @@ class Failure:
 
     def getTraceback(self, elideFrameworkCode=0, detail='default'):
         io = StringIO()
-        self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode, detail=detail)
+        self.printTraceback(file=io,
+                            elideFrameworkCode=elideFrameworkCode,
+                            detail=detail)
         return io.getvalue()
 
-    def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
-        """Emulate Python's standard error reporting mechanism.
+    def printTraceback(self,
+                       file=None,
+                       elideFrameworkCode=0, detail='default'):
+        """
+        Emulate Python's standard error reporting mechanism.
         """
         if file is None:
             #file = log.logerr
-            file = sys.stderr # changed by teratorn
+            file = sys.stderr  # changed by teratorn
         w = file.write
 
         # Preamble
         if detail == 'verbose':
-            w( '*--- Failure #%d%s---\n' %
+            w('*--- Failure #%d%s---\n' %
                (self.count,
                 (self.pickled and ' (pickled) ') or ' '))
         elif detail == 'brief':
@@ -485,7 +496,7 @@ class Failure:
                 hasFrames = 'Traceback (failure with no frames)'
             w("%s: %s: %s\n" % (hasFrames, self.type, self.value))
         else:
-            w( 'Traceback (most recent call last):\n')
+            w('Traceback (most recent call last):\n')
 
         # Frames, formatted in appropriate style
         if self.frames:
@@ -528,18 +539,20 @@ class Failure:
         self.printTraceback(file, elideFrameworkCode, detail='verbose')
 
 # slyphon: make post-morteming exceptions tweakable
-
 DO_POST_MORTEM = True
+
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
              Failure__init__=Failure.__init__.im_func):
     if (exc_value, exc_type, exc_tb) == (None, None, None):
         exc = sys.exc_info()
         if not exc[0] == self.__class__ and DO_POST_MORTEM:
-            print "Jumping into debugger for post-mortem of exception '%s':" % exc[1]
+            print "Jumping into debugger for post-mortem of exception '%s':" \
+                  % exc[1]
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb)
+
 
 def startDebugMode():
     """Enable debug hooks for Failures."""

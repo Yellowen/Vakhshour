@@ -1,10 +1,28 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
 
-import os, sys, hmac, errno, new, inspect
+# Copyright (c) 2006 Eric P. Mangold
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# These changes made by <lxsameer>:
+# Restyling code to be fit to pep8
+# SSL Support
+
+import os
+import sys
+import hmac
+import errno
+import new
+import inspect
 try:
-    import pwd, grp
+    import pwd
+    import grp
 except ImportError:
     pwd = grp = None
 try:
@@ -30,12 +48,12 @@ class InsensitiveDict:
     def __init__(self, dict=None, preserve=1):
         """Create an empty dictionary, or update from 'dict'."""
         self.data = {}
-        self.preserve=preserve
+        self.preserve = preserve
         if dict:
             self.update(dict)
 
     def __delitem__(self, key):
-        k=self._lowerOrReturn(key)
+        k = self._lowerOrReturn(key)
         del self.data[k]
 
     def _lowerOrReturn(self, key):
@@ -58,8 +76,8 @@ class InsensitiveDict:
     def has_key(self, key):
         """Case insensitive test whether 'key' exists."""
         k = self._lowerOrReturn(key)
-        return self.data.has_key(k)
-    __contains__=has_key
+        return k in self.data
+    __contains__ = has_key
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, str)
@@ -91,18 +109,18 @@ class InsensitiveDict:
     def setdefault(self, key, default):
         """If 'key' doesn't exists, associate it with the 'default' value.
         Return value associated with 'key'."""
-        if not self.has_key(key):
+        if not key in self:
             self[key] = default
         return self[key]
 
     def update(self, dict):
         """Copy (key,value) pairs from 'dict'."""
-        for k,v in dict.items():
+        for k, v in dict.items():
             self[k] = v
 
     def __repr__(self):
         """String representation of the dictionary."""
-        items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
+        items = ", ".join([("%r: %r" % (k, v)) for k, v in self.items()])
         return "InsensitiveDict({%s})" % items
 
     def iterkeys(self):
@@ -118,7 +136,7 @@ class InsensitiveDict:
             yield self._doPreserve(k), v
 
     def popitem(self):
-        i=self.items()[0]
+        i = self.items()[0]
         del self[i[0]]
         return i
 
@@ -133,29 +151,35 @@ class InsensitiveDict:
         return len(self.data)
 
     def __eq__(self, other):
-        for k,v in self.items():
-            if not (k in other) or not (other[k]==v):
+        for k, v in self.items():
+            if not (k in other) or not (other[k] == v):
                 return 0
-        return len(self)==len(other)
+
+        return len(self) == len(other)
+
 
 class OrderedDict(UserDict):
-    """A UserDict that preserves insert order whenever possible."""
+    """
+    A UserDict that preserves insert order whenever possible.
+    """
     def __init__(self, dict=None, **kwargs):
         self._order = []
         self.data = {}
         if dict is not None:
-            if hasattr(dict,'keys'):
+            if hasattr(dict, 'keys'):
                 self.update(dict)
             else:
-                for k,v in dict: # sequence
+                for k, v in dict:  # sequence
                     self[k] = v
         if len(kwargs):
             self.update(kwargs)
+
     def __repr__(self):
-        return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
+        return '{' + ', '.join([('%r: %r' % item) for item in self.items()]) +\
+               '}'
 
     def __setitem__(self, key, value):
-        if not self.has_key(key):
+        if not key in self:
             self._order.append(key)
         UserDict.__setitem__(self, key, value)
 
@@ -193,7 +217,7 @@ class OrderedDict(UserDict):
         return (key, value)
 
     def setdefault(self, item, default):
-        if self.has_key(item):
+        if item self:
             return self[item]
         self[item] = default
         return default
@@ -202,6 +226,7 @@ class OrderedDict(UserDict):
         for k, v in d.items():
             self[k] = v
 
+
 def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
@@ -209,9 +234,10 @@ def uniquify(lst):
     dct = {}
     result = []
     for k in lst:
-        if not dct.has_key(k): result.append(k)
+        if not k in dct: result.append(k)
         dct[k] = 1
     return result
+
 
 def padTo(n, seq, default=None):
     """Pads a sequence out to n elements,
@@ -226,7 +252,7 @@ def padTo(n, seq, default=None):
     """
 
     if len(seq) > n:
-        raise ValueError, "%d elements is more than %d." % (len(seq), n)
+        raise ValueError("%d elements is more than %d." % (len(seq), n))
 
     blank = [default] * n
 
@@ -234,17 +260,21 @@ def padTo(n, seq, default=None):
 
     return blank
 
+
 def getPluginDirs():
     import twisted
     systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
                             os.path.abspath(twisted.__file__))), 'plugins')
     userPlugins = os.path.expanduser("~/TwistedPlugins")
     confPlugins = os.path.expanduser("~/.twisted")
-    allPlugins = filter(os.path.isdir, [systemPlugins, userPlugins, confPlugins])
+    allPlugins = filter(os.path.isdir,
+                        [systemPlugins, userPlugins, confPlugins])
     return allPlugins
+
 
 def addPluginDir():
     sys.path.extend(getPluginDirs())
+
 
 def sibpath(path, sibling):
     """Return the path to a sibling of a file in the filesystem.
@@ -268,10 +298,12 @@ def _getpass(prompt):
     except EOFError:
         raise KeyboardInterrupt
 
-def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
-                confirmPrompt = 'Confirm password: ',
-                mismatchMessage = "Passwords don't match."):
-    """Obtain a password by prompting or from stdin.
+
+def getPassword(prompt='Password: ', confirm=0, forceTTY=0,
+                confirmPrompt='Confirm password: ',
+                mismatchMessage="Passwords don't match."):
+    """
+    Obtain a password by prompting or from stdin.
 
     If stdin is a terminal, prompt for a new password, and confirm (if
     C{confirm} is true) by asking again to make sure the user typed the same
@@ -319,18 +351,18 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
 def dict(*a, **k):
     import warnings
     import __builtin__
-    warnings.warn('twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
+    warnings.warn(
+        'twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
     return __builtin__.dict(*a, **k)
 
-def println(*a):
-    sys.stdout.write(' '.join(map(str, a))+'\n')
 
-# XXX
-# This does not belong here
-# But where does it belong?
+def println(*a):
+    sys.stdout.write(' '.join(map(str, a)) + '\n')
+
 
 def str_xor(s, b):
     return ''.join([chr(ord(c) ^ b) for c in s])
+
 
 def keyed_md5(secret, challenge):
     """Create the keyed MD5 string for the given secret and challenge."""
@@ -341,11 +373,16 @@ def keyed_md5(secret, challenge):
     )
     return hmac.HMAC(secret, challenge).hexdigest()
 
-def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
-    """Creates a function that will return a string representing a progress bar.
+
+def makeStatBar(width,
+                maxPosition, doneChar='=',
+                undoneChar='-',
+                currentChar='>'):
+    """
+    Creates a function that will return a string representing a progress bar.
     """
     aValue = width / float(maxPosition)
-    def statBar(position, force = 0, last = ['']):
+    def statBar(position, force=0, last=['']):
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
@@ -358,19 +395,27 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
         last[0] = result
         return result
 
-    statBar.__doc__ = """statBar(position, force = 0) -> '[%s%s%s]'-style progress bar
+    statBar.__doc__ = """
+    statBar(position, force = 0) -> '[%s%s%s]'-style progress bar
 
     returned string is %d characters long, and the range goes from 0..%d.
-    The 'position' argument is where the '%s' will be drawn.  If force is false,
-    '' will be returned instead if the resulting progress bar is identical to the
+    The 'position' argument is where the '%s' will be drawn.
+    If force is false, '' will be returned instead if the resulting
+    progress bar is identical to the
     previously returned progress bar.
-""" % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
+    """ % (doneChar * 3, currentChar, undoneChar * 3, width,
+           maxPosition, currentChar)
+
     return statBar
 
+
 def spewer(frame, s, ignored):
-    """A trace function for sys.settrace that prints every function or method call."""
+    """
+    A trace function for sys.settrace that prints every function
+    or method call.
+    """
     from twisted.python import reflect
-    if frame.f_locals.has_key('self'):
+    if 'self' in frame.f_locals:
         se = frame.f_locals['self']
         if hasattr(se, '__class__'):
             k = reflect.qual(se.__class__)
@@ -385,6 +430,7 @@ def spewer(frame, s, ignored):
             frame.f_code.co_filename,
             frame.f_lineno)
 
+
 def searchupwards(start, files=[], dirs=[]):
     """Walk upwards from start, looking for a directory containing
     all files and directories given as arguments::
@@ -392,20 +438,23 @@ def searchupwards(start, files=[], dirs=[]):
 
     If not found, return None
     """
-    start=os.path.abspath(start)
-    parents=start.split(os.sep)
-    exists=os.path.exists; join=os.sep.join; isdir=os.path.isdir
+    start = os.path.abspath(start)
+    parents = start.split(os.sep)
+    exists = os.path.exists
+    join = os.sep.join
+    isdir = os.path.isdir
+
     while len(parents):
-        candidate=join(parents)+os.sep
-        allpresent=1
+        candidate = join(parents) + os.sep
+        allpresent = 1
         for f in files:
             if not exists("%s%s" % (candidate, f)):
-                allpresent=0
+                allpresent = 0
                 break
         if allpresent:
             for d in dirs:
                 if not isdir("%s%s" % (candidate, d)):
-                    allpresent=0
+                    allpresent = 0
                     break
         if allpresent: return candidate
         parents.pop(-1)
@@ -426,10 +475,10 @@ class LineLog:
         """
         if size < 0:
             size = 0
-        self.log = [None]*size
+        self.log = [None] * size
         self.size = size
 
-    def append(self,line):
+    def append(self, line):
         if self.size:
             self.log[:-1] = self.log[1:]
             self.log[-1] = line
@@ -437,14 +486,15 @@ class LineLog:
             self.log.append(line)
 
     def str(self):
-        return '\n'.join(filter(None,self.log))
+        return '\n'.join(filter(None, self.log))
 
     def __getitem__(self, item):
-        return filter(None,self.log)[item]
+        return filter(None, self.log)[item]
 
     def clear(self):
         """Empty the log"""
-        self.log = [None]*self.size
+        self.log = [None] * self.size
+
 
 def raises(exception, f, *args, **kwargs):
     """Determine whether the given call raises the given exception"""
@@ -453,6 +503,7 @@ def raises(exception, f, *args, **kwargs):
     except exception:
         return 1
     return 0
+
 
 class IntervalDifferential:
     """
@@ -488,6 +539,7 @@ class IntervalDifferential:
     def __iter__(self):
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
+
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
 
@@ -522,7 +574,7 @@ class _IntervalDifferentialIterator:
                     if i[2] > index:
                         i[2] -= 1
                 return
-        raise ValueError, "Specified interval not in IntervalDifferential"
+        raise ValueError("Specified interval not in IntervalDifferential")
 
 
 class FancyStrMixin:
@@ -531,21 +583,26 @@ class FancyStrMixin:
     sequences of (attributeName, displayName, formatCharacter)
     """
     showAttributes = ()
+
     def __str__(self):
-        r = ['<', hasattr(self, 'fancybasename') and self.fancybasename or self.__class__.__name__]
+        r = ['<', hasattr(self, 'fancybasename') and \
+             self.fancybasename or self.__class__.__name__]
+
         for attr in self.showAttributes:
             if isinstance(attr, str):
                 r.append(' %s=%r' % (attr, getattr(self, attr)))
             else:
-                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
+                r.append((' %s=' + attr[2]) % (attr[1],
+                                               getattr(self, attr[0])))
+
         r.append('>')
         return ''.join(r)
     __repr__ = __str__
 
 
-
 class FancyEqMixin:
     compareAttributes = ()
+
     def __eq__(self, other):
         if not self.compareAttributes:
             return self is other
@@ -555,13 +612,11 @@ class FancyEqMixin:
                 [getattr(other, name) for name in self.compareAttributes])
         return NotImplemented
 
-
     def __ne__(self, other):
         result = self.__eq__(other)
         if result is NotImplemented:
             return result
         return not result
-
 
 
 def dsu(list, key):
@@ -636,7 +691,7 @@ else:
             if username in userlist:
                 l.append(gid)
                 if len(l) == max_groups:
-                    break # No more groups, ignore any more
+                    break  # No more groups, ignore any more
         try:
             _setgroups_until_success(l)
         except OSError, e:
@@ -648,7 +703,6 @@ else:
                         raise
             else:
                 raise
-
 
 
 def switchUID(uid, gid, euid=False):
@@ -715,19 +769,20 @@ class SubclassableCStringIO(object):
     def getvalue(self):
         return self.__csio.getvalue()
 
+
 def moduleMovedForSplit(origModuleName, newModuleName, moduleDesc,
                         projectName, projectURL, globDict):
     from twisted.python import reflect
     modoc = """
-%(moduleDesc)s
+    %(moduleDesc)s
 
-This module is DEPRECATED. It has been split off into a third party
-package, Twisted %(projectName)s. Please see %(projectURL)s.
+    This module is DEPRECATED. It has been split off into a third party
+    package, Twisted %(projectName)s. Please see %(projectURL)s.
 
-This is just a place-holder that imports from the third-party %(projectName)s
-package for backwards compatibility. To use it, you need to install
-that package.
-""" % {'moduleDesc': moduleDesc,
+    This is just a place-holder that imports from the third-party
+    %(projectName)s package for backwards compatibility. To use it,
+    you need to install that package.
+    """ % {'moduleDesc': moduleDesc,
        'projectName': projectName,
        'projectURL': projectURL}
 
@@ -741,11 +796,12 @@ that package.
                           % (projectName, origModuleName, projectURL))
 
     # Populate the old module with the new module's contents
-    for k,v in vars(newModule).items():
+    for k, v in vars(newModule).items():
         globDict[k] = v
     globDict['__doc__'] = modoc
     import warnings
-    warnings.warn("%s has moved to %s. See %s." % (origModuleName, newModuleName,
+    warnings.warn("%s has moved to %s. See %s." % (origModuleName,
+                                                   newModuleName,
                                                    projectURL),
                   DeprecationWarning, stacklevel=3)
     return
@@ -760,10 +816,13 @@ def untilConcludes(f, *a, **kw):
                 continue
             raise
 
+
 # A value about twice as large as any Python int, to which negative values
 # from id() will be added, moving them into a range which should begin just
 # above where positive values from id() leave off.
 _HUGEINT = (sys.maxint + 1L) * 2L
+
+
 def unsignedID(obj):
     """
     Return the id of an object as an unsigned number so that its hex
@@ -773,6 +832,7 @@ def unsignedID(obj):
     if rval < 0:
         rval += _HUGEINT
     return rval
+
 
 def mergeFunctionMetadata(f, g):
     """
@@ -839,7 +899,8 @@ def nameToLabel(mname):
                     word += letter
                 else:
                     # acronym
-                    # we're processing the lowercase letter after the acronym-then-capital
+                    # we're processing the lowercase letter after the
+                    # acronym-then-capital
                     lastWord = word[:-1]
                     firstLetter = word[-1]
                     labelList.append(lastWord)
@@ -855,7 +916,6 @@ def nameToLabel(mname):
         return mname.capitalize()
     labelList.append(word)
     return ' '.join(labelList)
-
 
 
 def uidFromString(uidString):
@@ -880,7 +940,6 @@ def uidFromString(uidString):
         return pwd.getpwnam(uidString)[2]
 
 
-
 def gidFromString(gidString):
     """
     Convert a group identifier, as a string, into an integer GID.
@@ -901,7 +960,6 @@ def gidFromString(gidString):
         if grp is None:
             raise
         return grp.getgrnam(gidString)[2]
-
 
 
 __all__ = [

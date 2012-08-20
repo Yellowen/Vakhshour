@@ -1,11 +1,22 @@
 # -*- test-case-name: twisted.test.test_defer -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
+# Copyright (c) 2006 Eric P. Mangold
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
-"""
-Support for results that aren't immediately available.
-"""
+# These changes made by <lxsameer>:
+# Restyling code to be fit to pep8
+# SSL Support
+
+
+# Support for results that aren't immediately available.
+
 
 from __future__ import nested_scopes, generators
 import traceback
@@ -24,10 +35,12 @@ class AlreadyCalledError(Exception):
 class TimeoutError(Exception):
     pass
 
+
 def logError(err):
     #log.err(err)
     sys.stdout.write(str(err))
     return err
+
 
 def succeed(result):
     """
@@ -83,14 +96,15 @@ def execute(callable, *args, **kw):
     else:
         return succeed(result)
 
+
 def maybeDeferred(f, *args, **kw):
     """Invoke a function that may or may not return a deferred.
 
     Call the given function with the given arguments.  If the returned
-    object is a C{Deferred}, return it.  If the returned object is a C{Failure},
-    wrap it with C{fail} and return it.  Otherwise, wrap it in C{succeed} and
-    return it.  If an exception is raised, convert it to a C{Failure}, wrap it
-    in C{fail}, and then return it.
+    object is a C{Deferred}, return it.  If the returned object is
+    a C{Failure}, wrap it with C{fail} and return it.  Otherwise, wrap it
+    in C{succeed} and return it.  If an exception is raised, convert it to
+    a C{Failure}, wrap it in C{fail}, and then return it.
 
     @type f: Any callable
     @param f: The callable to invoke
@@ -117,27 +131,34 @@ def maybeDeferred(f, *args, **kw):
             return succeed(result)
     return deferred
 
+
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
+
 
 def passthru(arg):
     return arg
 
+
 def setDebugging(on):
-    """Enable or disable Deferred debugging.
+    """
+    Enable or disable Deferred debugging.
 
     When debugging is on, the call stacks from creation and invocation are
     recorded, and added to any AlreadyCalledErrors we raise.
     """
-    Deferred.debug=bool(on)
+    Deferred.debug = bool(on)
+
 
 def getDebugging():
     """Determine whether Deferred debugging is enabled.
     """
     return Deferred.debug
 
+
 class Deferred:
-    """This is a callback which will be put off until later.
+    """
+    This is a callback which will be put off until later.
 
     Why do we want this? Well, in cases where a function in a threaded
     program would block until it gets a result, for Twisted it should
@@ -244,7 +265,6 @@ class Deferred:
         assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
-
     def errback(self, fail=None):
         """
         Run all error callbacks that have been added to this Deferred.
@@ -270,12 +290,11 @@ class Deferred:
 
         self._startRunCallbacks(fail)
 
-
     def pause(self):
-        """Stop processing on a Deferred until L{unpause}() is called.
+        """
+        Stop processing on a Deferred until L{unpause}() is called.
         """
         self.paused = self.paused + 1
-
 
     def unpause(self):
         """Process all callbacks made since L{pause}() was called.
@@ -371,7 +390,8 @@ class Deferred:
 
         if self.called:
             return
-        assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
+        assert not self.timeoutCall, \
+               "Don't call setTimeout twice on the same Deferred."
 
         from twisted.internet import reactor
         self.timeoutCall = reactor.callLater(
@@ -382,10 +402,12 @@ class Deferred:
     def __str__(self):
         cname = self.__class__.__name__
         if hasattr(self, 'result'):
-            return "<%s at %s  current result: %r>" % (cname, hex(unsignedID(self)),
+            return "<%s at %s  current result: %r>" % (cname,
+                                                       hex(unsignedID(self)),
                                                        self.result)
         return "<%s at %s>" % (cname, hex(unsignedID(self)))
     __repr__ = __str__
+
 
 class DebugInfo:
     """Deferred debug helper"""
@@ -395,11 +417,11 @@ class DebugInfo:
         info = ''
         if hasattr(self, "creator"):
             info += " C: Deferred was created:\n C:"
-            info += "".join(self.creator).rstrip().replace("\n","\n C:")
+            info += "".join(self.creator).rstrip().replace("\n", "\n C:")
             info += "\n"
         if hasattr(self, "invoker"):
             info += " I: First Invoker was:\n I:"
-            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
+            info += "".join(self.invoker).rstrip().replace("\n", "\n I:")
             info += "\n"
         return info
 
@@ -418,6 +440,7 @@ class DebugInfo:
                 sys.stderr.write("(debug: " + debugInfo + ")")
             #log.err(self.failResult)
             sys.stderr.write(str(self.failResult))
+
 
 class FirstError(Exception):
     """First error to occur in a DeferredList if fireOnOneErrback is set.
@@ -455,6 +478,7 @@ class FirstError(Exception):
             return (self.subFailure == other.subFailure and
                     self.index == other.index)
         return False
+
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
@@ -506,8 +530,8 @@ class DeferredList(Deferred):
         index = 0
         for deferred in deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
-                                  callbackArgs=(index,SUCCESS),
-                                  errbackArgs=(index,FAILURE))
+                                  callbackArgs=(index, SUCCESS),
+                                  errbackArgs=(index, FAILURE))
             index = index + 1
 
     def _cbDeferred(self, result, index, succeeded):
@@ -536,6 +560,7 @@ def _parseDListResult(l, fireOnOneErrback=0):
             assert success
     return [x[1] for x in l]
 
+
 def gatherResults(deferredList):
     """Returns list with result of given Deferreds.
 
@@ -548,15 +573,13 @@ def gatherResults(deferredList):
     d.addCallback(_parseDListResult)
     return d
 
-# Constants for use with DeferredList
 
+# Constants for use with DeferredList
 SUCCESS = True
 FAILURE = False
 
 
-
 ## deferredGenerator
-
 class waitForDeferred:
     """
     See L{deferredGenerator}.
@@ -564,15 +587,15 @@ class waitForDeferred:
 
     def __init__(self, d):
         if not isinstance(d, Deferred):
-            raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
+            raise TypeError(
+                "You must give waitForDeferred a Deferred. You gave it %r." % \
+                (d,))
         self.d = d
-
 
     def getResult(self):
         if isinstance(self.result, failure.Failure):
             self.result.raiseException()
         return self.result
-
 
 
 def _deferGenerator(g, deferred):
@@ -586,8 +609,8 @@ def _deferGenerator(g, deferred):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    waiting = [True, # defgen is waiting for result?
-               None] # result
+    waiting = [True,  # defgen is waiting for result?
+               None]  # result
 
     while 1:
         try:
@@ -628,7 +651,6 @@ def _deferGenerator(g, deferred):
             waiting[1] = None
 
             result = None
-
 
 
 def deferredGenerator(f):
@@ -700,11 +722,13 @@ def deferredGenerator(f):
 try:
     BaseException
 except NameError:
-    BaseException=Exception
+    BaseException = Exception
+
 
 class _DefGen_Return(BaseException):
     def __init__(self, value):
         self.value = value
+
 
 def returnValue(val):
     """
@@ -721,6 +745,7 @@ def returnValue(val):
     """
     raise _DefGen_Return(val)
 
+
 def _inlineCallbacks(result, g, deferred):
     """
     See L{inlineCallbacks}.
@@ -730,8 +755,8 @@ def _inlineCallbacks(result, g, deferred):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    waiting = [True, # waiting for result?
-               None] # result
+    waiting = [True,  # waiting for result?
+               None]  # result
 
     while 1:
         try:
@@ -774,12 +799,11 @@ def _inlineCallbacks(result, g, deferred):
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
 
-
             waiting[0] = True
             waiting[1] = None
 
-
     return deferred
+
 
 def inlineCallbacks(f):
     """
@@ -829,7 +853,6 @@ def inlineCallbacks(f):
 
 
 ## DeferredLock/DeferredQueue
-
 class _ConcurrencyPrimitive(object):
     def __init__(self):
         self.waiting = []
@@ -839,7 +862,8 @@ class _ConcurrencyPrimitive(object):
         return r
 
     def run(*args, **kwargs):
-        """Acquire, run, release.
+        """
+        Acquire, run, release.
 
         This function takes a callable as its first argument and any
         number of other positional and keyword arguments.  When the
@@ -853,7 +877,9 @@ class _ConcurrencyPrimitive(object):
         """
         if len(args) < 2:
             if not args:
-                raise TypeError("run() takes at least 2 arguments, none given.")
+                raise TypeError(
+                    "run() takes at least 2 arguments, none given.")
+
             raise TypeError("%s.run() takes at least 2 arguments, 1 given" % (
                 args[0].__class__.__name__,))
         self, f = args[:2]
@@ -907,6 +933,7 @@ class DeferredLock(_ConcurrencyPrimitive):
             d = self.waiting.pop(0)
             d.callback(self)
 
+
 class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
@@ -922,7 +949,8 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
 
         @return: a Deferred which fires on token acquisition.
         """
-        assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
+        assert self.tokens >= 0, \
+               "Internal inconsistency??  tokens should never be negative"
         d = Deferred()
         if not self.tokens:
             self.waiting.append(d)
@@ -937,7 +965,8 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
         Should be called by whoever did the acquire() when the shared
         resource is free.
         """
-        assert self.tokens < self.limit, "Someone released me too many times: too many tokens!"
+        assert self.tokens < self.limit, \
+               "Someone released me too many times: too many tokens!"
         self.tokens = self.tokens + 1
         if self.waiting:
             # someone is waiting to acquire token
@@ -945,8 +974,10 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
             d = self.waiting.pop(0)
             d.callback(self)
 
+
 class QueueOverflow(Exception):
     pass
+
 
 class QueueUnderflow(Exception):
     pass
@@ -991,7 +1022,8 @@ class DeferredQueue(object):
     def get(self):
         """Attempt to retrieve and remove an object from the queue.
 
-        @return: a Deferred which fires with the next object available in the queue.
+        @return: a Deferred which fires with the next object available
+                 in the queue.
 
         @raise QueueUnderflow: Too many (more than C{backlog})
         Deferreds are already waiting for an object from this queue.
