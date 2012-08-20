@@ -122,7 +122,7 @@ class Subscribe(protocol.Protocol, VObject):
         pass
 
 
-class SubscribeFactory(protocol.ClientFactory):
+class SubscribeFactory(protocol.ReconnectingClientFactory):
     """
     Event transport factory. reponsible for received Events.
     """
