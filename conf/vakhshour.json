@@ -5,6 +5,10 @@
     "ssl_key": "/home/lxsameer/src/Vakhshour/keys/vakhshour.key",
     "ssl_cert": "/home/lxsameer/src/Vakhshour/keys/vakhshour.crt",
     "ca_cert": "/home/lxsameer/src/Vakhshour/keys/ca.crt",
-    "secure": true
+    "secure": true,
+    "webapps": {
+	"localhost:3333": null,
+	"localhost:2222": null
+    }
 }
 

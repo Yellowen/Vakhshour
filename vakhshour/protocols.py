@@ -18,8 +18,13 @@
 # -----------------------------------------------------------------------------
 import json
 
+from zope.interface import implements
 from twisted.internet import protocol, reactor
 from twisted.protocols.amp import AMP
+from twisted.web.client import Agent
+from twisted.web.http_headers import Headers
+from twisted.internet.defer import succeed
+from twisted.web.iweb import IBodyProducer
 
 from base import VObject
 from commands import Event
@@ -87,8 +92,9 @@ class EventPublisher(protocol.Protocol):
 class EventPublisherFactory(protocol.Factory, VObject):
     protocol = EventPublisher
 
-    def __init__(self):
+    def __init__(self, webapps):
         self.clients = set()
+        self.webapps = webapps
 
     def buildProtocol(self, addr):
         p = self.protocol(self)
@@ -99,6 +105,48 @@ class EventPublisherFactory(protocol.Factory, VObject):
             data = json.dumps(kwargs)
             self.logger.info("Publish: %s" % data)
             c.transport.write(data)
+
+        body = self.JsonProducer(str(kwargs))
+
+        if self.webapps:
+            agent = Agent(reactor)
+            for app in self.webapps:
+                if not self.webapps[app]:
+                    # None means: use plain json transport
+                    url = str("http://%s/event/" % app.rstrip("/"))
+
+                elif self.webapps[app] == "ssl":
+                    pass
+
+                elif self.webapps[app] == "rsa":
+                    pass
+
+                d = agent.request(
+                    'GET',
+                    url,
+                    Headers({'User-Agent': ['Vakhshour']}),
+                    body)
+                #d.addCallback(self._response)
+
+    def _response(self, ignore):
+        return
+
+    class JsonProducer(object):
+        implements(IBodyProducer)
+
+        def __init__(self, body):
+            self.body = body
+            self.length = len(body)
+
+        def startProducing(self, consumer):
+            consumer.write(json.dumps(self.body))
+            return succeed(None)
+
+        def pauseProducing(self):
+            pass
+
+        def stopProducing(self):
+            pass
 
 
 class Subscribe(protocol.Protocol, VObject):
