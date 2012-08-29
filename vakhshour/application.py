@@ -19,6 +19,7 @@
 
 import json
 import logging
+import logging.handlers
 
 from argparse import ArgumentParser
 
@@ -35,8 +36,8 @@ class Vakhshour(object):
 
     def __init__(self):
         self._setup_arguments()
-        self._setup_logger()
         self._parse_config()
+        self._setup_logger()
 
     def _setup_arguments(self):
         """
@@ -57,12 +58,6 @@ class Vakhshour(object):
                                  help="Use CONFIG as configuration file."
                                  )
 
-        self.parser.add_argument("-s", "--secure",
-                                 action="store_true",
-                                 default=False,
-                                 help="Use Secure Connections."
-                                 )
-
         self.args = self.parser.parse_args()
         return
 
@@ -70,14 +65,26 @@ class Vakhshour(object):
         """
         Setup logger.
         """
-        # TODO: configure logger
-        level = 25
+
         if self.args.debug:
             level = 0
+        else:
+            level = self.config.get("log_level", 40)
 
         logging.basicConfig(format=self.FORMAT,
                             level=level)
+
         self.logger = logging.getLogger("vakhshour")
+
+        filename = self.config.get("log_file", None)
+        if filename:
+            hdlr = logging.handlers.RotatingFileHandler(filename,
+                                                mode='w+',
+                                                maxBytes=10485760,  # 10MB
+                                                backupCount=5)
+            hdlr.setFormatter(logging.Formatter(self.FORMAT))
+
+        self.logger.addHandler(hdlr)
         return
 
     def _parse_config(self):

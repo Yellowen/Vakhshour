@@ -8,6 +8,8 @@
     "secure": true,
     "webapps": {
 	"rsa://localhost:3333": "/home/lxsameer/src/tmp/ida_rsa.pub"
-    }
+    },
+    "log_file": "/tmp/vakhshour.log",
+    "log_level": 40
 }
 
