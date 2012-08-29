@@ -29,7 +29,7 @@ setup(name='Vakhshour',
       license='GPL v2',
       scripts=["vakhshourd"],
       #data_files=[("/etc/init.d/", ["conf/vakhshour.json"]), ],
-      packages=['vakhshour'],
+      packages=['vakhshour', 'vakhshour.events', 'vakhshour.amp'],
       classifiers=[
           'Development Status :: 5 - Production/Stable',
           'Environment :: Console',

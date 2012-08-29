@@ -106,40 +106,77 @@ class EventPublisherFactory(protocol.Factory, VObject):
             self.logger.info("Publish: %s" % data)
             c.transport.write(data)
 
-        body = self.JsonProducer(str(kwargs))
-
         if self.webapps:
             agent = Agent(reactor)
             for app in self.webapps:
-                if not self.webapps[app]:
-                    # None means: use plain json transport
-                    url = str("http://%s/event/" % app.rstrip("/"))
+                protocol, domain = self._parse_url(app)
+                if protocol == "http":
+                    # use plain json transport
+                    url = str("http://%s/event/" % domain.rstrip("/"))
+                    body = self.JsonProducer(str(kwargs))
 
-                elif self.webapps[app] == "ssl":
-                    pass
+                elif protocol == "https":
+                    url = str("https://%s/event/" % domain.rstrip("/"))
+                    encoder = self.Encoder("SSL", self.webapps[app])
+                    body = self.JsonProducer(str(kwargs), encoder)
 
-                elif self.webapps[app] == "rsa":
-                    pass
+                elif protocol == "rsa":
+                    url = str("http://%s/event/" % domain.rstrip("/"))
+                    # Passing the app public RSA key path to encoder
+                    encoder = self.Encoder("RSA", self.webapps[app])
+                    body = self.JsonProducer(str(kwargs), encoder)
+
 
                 d = agent.request(
                     'GET',
                     url,
                     Headers({'User-Agent': ['Vakhshour']}),
                     body)
-                #d.addCallback(self._response)
+                d.addCallback(self._response)
+
+    def _parse_url(self, url):
+        try:
+            protocol, domain = url.split("://")
+            return protocol, domain
+        except ValueError:
+            raise ValueError("'%s' is not well formatted." % url)
 
     def _response(self, ignore):
         return
 
+    class Encoder(VObject):
+
+        def __init__(self, codec=None, pub_key=None):
+            super(EventPublisherFactory.Encoder, self).__init__()
+            self.codec = codec
+            self.key = pub_key
+            self.logger.info(self.codec)
+
+        def encode(self, data):
+            if not self.codec:
+                return data
+            elif self.codec.lower() == "ssl":
+                raise self.NotImplemented("This method not implemented.")
+            elif self.codec.lower() == "rsa":
+                from Crypto.PublicKey import RSA
+
+                key = RSA.importKey(file(self.key).read())
+                data = key.encrypt(data, 7)[0]
+                return data
+            else:
+                raise ValueError("Unknown codec '%s'" % self.codec)
+                
     class JsonProducer(object):
         implements(IBodyProducer)
 
-        def __init__(self, body):
-            self.body = body
-            self.length = len(body)
-
+        def __init__(self, body, encoder=None):
+            self.body = json.dumps(body)
+            self.encoder = encoder
+            self.encrypted_data = self.encoder.encode(self.body) 
+            self.length = len(self.encrypted_data)
+            
         def startProducing(self, consumer):
-            consumer.write(json.dumps(self.body))
+            consumer.write(self.encrypted_data)
             return succeed(None)
 
         def pauseProducing(self):

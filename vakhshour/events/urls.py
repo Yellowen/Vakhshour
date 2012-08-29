@@ -16,33 +16,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
-import json
 
-from django.http import HttpResponse
-from django.conf import settings
+from django.conf.urls.defaults import patterns, include, url
 
 
-def get_events(request):
-    """
-    Read the incoming event and run its handlers.
-    """
-    encrypted_data = request.read()
-
-    config = {"encryption": None,
-              "private key": None}
-
-    if hasattr(settings, "VAKHSOUR_CONFIG"):
-        config = settings.VAKHSOUR_CONFIG
-
-    if not config['encryption']:
-        data = json.loads(encrypted_data)
-    elif config['encryption'].lower() == "rsa":
-        from Crypto.PublicKey import RSA
-
-        key = RSA.importKey(file(config["private key"]).read())
-        data = json.loads(key.decrypt(encrypted_data))
-    else:
-        raise ValueError("'%s' encryption type not supported." % \
-                         config["encryption"])
-    print data
-    return HttpResponse("0")
+urlpatterns = patterns('',
+    url(r'^$', 'vakhshour.events.views.get_events', name="vakhshour"),
+)

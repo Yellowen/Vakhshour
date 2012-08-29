@@ -7,8 +7,7 @@
     "ca_cert": "/home/lxsameer/src/Vakhshour/keys/ca.crt",
     "secure": true,
     "webapps": {
-	"localhost:3333": null,
-	"localhost:2222": null
+	"rsa://localhost:3333": "/home/lxsameer/src/tmp/ida_rsa.pub"
     }
 }
 
