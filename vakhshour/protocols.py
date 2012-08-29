@@ -113,18 +113,18 @@ class EventPublisherFactory(protocol.Factory, VObject):
                 if protocol == "http":
                     # use plain json transport
                     url = str("http://%s/event/" % domain.rstrip("/"))
-                    body = self.JsonProducer(str(kwargs))
+                    body = self.JsonProducer(kwargs)
 
                 elif protocol == "https":
                     url = str("https://%s/event/" % domain.rstrip("/"))
                     encoder = self.Encoder("SSL", self.webapps[app])
-                    body = self.JsonProducer(str(kwargs), encoder)
+                    body = self.JsonProducer(kwargs, encoder)
 
                 elif protocol == "rsa":
                     url = str("http://%s/event/" % domain.rstrip("/"))
                     # Passing the app public RSA key path to encoder
                     encoder = self.Encoder("RSA", self.webapps[app])
-                    body = self.JsonProducer(str(kwargs), encoder)
+                    body = self.JsonProducer(kwargs, encoder)
 
 
                 d = agent.request(
@@ -171,6 +171,7 @@ class EventPublisherFactory(protocol.Factory, VObject):
 
         def __init__(self, body, encoder=None):
             self.body = json.dumps(body)
+
             self.encoder = encoder
             self.encrypted_data = self.encoder.encode(self.body) 
             self.length = len(self.encrypted_data)

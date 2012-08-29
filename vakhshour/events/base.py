@@ -16,28 +16,26 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
-import json
-
-from twisted.protocols.amp import (Integer, String, Unicode,
-                                   Command, CommandLocator, AMP)
-
-from base import VObject
 
 
-class Json(String):
-    """
-    Json argument type.
-    """
-    def toString(self, inObject):
-        return str(json.dumps(inObject))
-
-    def fromString(self, inString):
-        return json.loads(inString)
+class EventHandler(object):
+    pass
 
 
-class Event(Command):
-    arguments = [('name', Unicode()),
-                 ('sender', String()),
-                 ("kwargs", Json())]
+class Handlers(object):
+    _register = {}
 
-    response = [('status', Integer())]
+    def register(self, handler):
+        if handler.__class__.__name__ in self._register:
+            pass
+        else:
+            self._register[handler.__class__.__name__] = handler
+
+    def execute_handlers(self, event, sender, kwargs):
+        for handler in self._register:
+            if hasattr(self._register[handler], "on_%s" % event):
+                method = getattr(self._register[handler], "on_%s" % event)
+                method(sender, **kwargs)
+
+
+handlers = Handlers()

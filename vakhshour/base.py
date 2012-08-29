@@ -54,12 +54,13 @@ class CtxFactory(ssl.ClientContextFactory):
 
         return ctx
 
+
 class Node(object):
     def __init__(self, host="127.0.0.1", port="8888",
                  secure=False, ssl_key=None, ssl_cert=None,
                  expect_answer=False,
                  *args, **kwargs):
-        
+
         super(Node, self).__init__(*args, **kwargs)
         self.host = host
         self.port = port
@@ -89,15 +90,15 @@ class Node(object):
 
     class Event(ampy.Command):
 
-        class Json(ampy.Unicode):
+        class Json(ampy.String):
             """
             Json argument type.
             """
             def toString(self, inObject):
-                return json.dumps(inObject).encode('utf-8')
+                return str(json.dumps(inObject))
 
             def fromString(self, inString):
-                return json.loads(inString.decode('utf-8'))
+                return json.loads(inString)
 
         commandName = "Event"
 

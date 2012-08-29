@@ -16,44 +16,20 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # -----------------------------------------------------------------------------
-import json
 
-from django.http import HttpResponse
 from django.conf import settings
 
-from base import handlers
 
-
-def get_events(request):
+def handler_discovery():
     """
-    Read the incoming event and run its handlers.
+    Try to import events module im each installed app.
     """
-    encrypted_data = request.read()
-
-    config = {"encryption": None,
-              "private key": None}
-
-    if hasattr(settings, "VAKHSOUR_CONFIG"):
-        config = settings.VAKHSOUR_CONFIG
-
-    if not config['encryption']:
-        data = json.loads(encrypted_data)
-    elif config['encryption'].lower() == "rsa":
-        from Crypto.PublicKey import RSA
-
-        key = RSA.importKey(file(config["private key"]).read())
-        data = json.loads(key.decrypt(encrypted_data))
-
-    else:
-        raise ValueError("'%s' encryption type not supported." % \
-                         config["encryption"])
-
-    event = data["name"]
-    sender = data["sender"]
-
-    del data["name"]
-    del data["sender"]
-    handlers.execute_handlers(event,
-                              sender,
-                              data)
-    return HttpResponse("0")
+    for app in settings.INSTALLED_APPS:
+        try:
+            module = __import__(app,
+                                globals(),
+                                locals(),
+                                ["events"],
+                                -1)
+        except ImportError:
+            pass
