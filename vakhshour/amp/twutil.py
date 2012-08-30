@@ -217,7 +217,7 @@ class OrderedDict(UserDict):
         return (key, value)
 
     def setdefault(self, item, default):
-        if item self:
+        if item in self:
             return self[item]
         self[item] = default
         return default

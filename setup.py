@@ -21,15 +21,18 @@
 from distutils.core import setup
 
 setup(name='Vakhshour',
-      version='0.1.0',
+      version='0.91.45',
       description='Event and Message layer application',
       author='Sameer Rahmani',
       author_email='lxsameer@gnu.org',
-      url='http://issue.yellowen.com/projects/vakhshur',
+      url='http://vakhshour.yellowen.com/',
+      download_url="http://vakhshour.yellowen.com/downloads/",
+      keywords=('Event', 'message', 'transport'),
       license='GPL v2',
       scripts=["vakhshourd"],
       #data_files=[("/etc/init.d/", ["conf/vakhshour.json"]), ],
       packages=['vakhshour', 'vakhshour.events', 'vakhshour.amp'],
+      requires=['twisted', 'pyopenssl', 'pycrypto'],
       classifiers=[
           'Development Status :: 5 - Production/Stable',
           'Environment :: Console',

@@ -6,11 +6,17 @@
 Welcome to Vakhshour's documentation!
 =====================================
 
+Vakhshour is a highlevel event passing application.
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
+   :titlesonly:
 
+   Quick start <quickstart.rst>
+   Concepts <concepts.rst>
+   Secure Transport <secure.rst>
 
 
 Indices and tables
