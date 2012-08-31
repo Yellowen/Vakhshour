@@ -165,7 +165,7 @@ class EventPublisherFactory(protocol.Factory, VObject):
                 return data
             else:
                 raise ValueError("Unknown codec '%s'" % self.codec)
-                
+
     class JsonProducer(object):
         implements(IBodyProducer)
 

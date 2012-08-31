@@ -15,8 +15,7 @@ Contents:
    :titlesonly:
 
    Quick start <quickstart.rst>
-   Concepts <concepts.rst>
-   Secure Transport <secure.rst>
+   Configuration <configuration.rst>
 
 
 Indices and tables
