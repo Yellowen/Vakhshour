@@ -126,7 +126,6 @@ class EventPublisherFactory(protocol.Factory, VObject):
                     encoder = self.Encoder("RSA", self.webapps[app])
                     body = self.JsonProducer(kwargs, encoder)
 
-
                 d = agent.request(
                     'GET',
                     url,

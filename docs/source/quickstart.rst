@@ -1,3 +1,5 @@
+.. _quick guide:
+
 Quick Start
 ===========
 In this guide you will learn how to use Vakhshour event passing platform as fast as possible.

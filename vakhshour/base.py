@@ -112,4 +112,3 @@ class Node(object):
         def deserializeResponse(cls, wireResponse):
             return wireResponse
         deserializeResponse = classmethod(deserializeResponse)
-

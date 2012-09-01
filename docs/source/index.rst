@@ -3,6 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. sectionauthor:: Sameer Rahmani <lxsameer@gnu.org>
+
 Welcome to Vakhshour's documentation!
 =====================================
 
@@ -16,7 +18,8 @@ Contents:
 
    Quick start <quickstart.rst>
    Configuration <configuration.rst>
-
+   Developer Mini Guide <devguide.rst>
+   FAQ <faq.rst>
 
 Indices and tables
 ==================
