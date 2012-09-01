@@ -2,6 +2,7 @@
 README
 setup.py
 vakhshourd
+conf/vakhshour.json
 vakhshour/__init__.py
 vakhshour/application.py
 vakhshour/base.py
