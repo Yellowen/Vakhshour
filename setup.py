@@ -21,7 +21,7 @@
 from distutils.core import setup
 
 setup(name='Vakhshour',
-      version='0.91.45',
+      version='0.91.46',
       description='Event and Message layer application',
       author='Sameer Rahmani',
       author_email='lxsameer@gnu.org',

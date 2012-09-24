@@ -33,8 +33,8 @@ def get_events(request):
     config = {"encryption": None,
               "private key": None}
 
-    if hasattr(settings, "VAKHSOUR_CONFIG"):
-        config = settings.VAKHSOUR_CONFIG
+    if hasattr(settings, "VAKHSOUR"):
+        config = settings.VAKHSOUR
 
     if not config['encryption']:
         data = json.loads(encrypted_data)

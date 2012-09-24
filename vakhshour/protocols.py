@@ -48,7 +48,6 @@ class EventProtocol(AMP, VObject):
         return {"status": 0}
 
 
-
 class EventFactory(protocol.Factory):
     """
     Event transport factory. reponsible for received Events.
@@ -113,7 +112,7 @@ class EventPublisherFactory(protocol.Factory, VObject):
                 if protocol == "http":
                     # use plain json transport
                     url = str("http://%s/event/" % domain.rstrip("/"))
-                    body = self.JsonProducer(kwargs)
+                    body = self.JsonProducer(kwargs, self.Encoder())
 
                 elif protocol == "https":
                     url = str("https://%s/event/" % domain.rstrip("/"))
@@ -154,8 +153,10 @@ class EventPublisherFactory(protocol.Factory, VObject):
         def encode(self, data):
             if not self.codec:
                 return data
+
             elif self.codec.lower() == "ssl":
                 raise self.NotImplemented("This method not implemented.")
+
             elif self.codec.lower() == "rsa":
                 from Crypto.PublicKey import RSA
 
@@ -174,7 +175,7 @@ class EventPublisherFactory(protocol.Factory, VObject):
             self.encoder = encoder
             self.encrypted_data = self.encoder.encode(self.body) 
             self.length = len(self.encrypted_data)
-            
+
         def startProducing(self, consumer):
             consumer.write(self.encrypted_data)
             return succeed(None)
