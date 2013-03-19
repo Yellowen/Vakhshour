@@ -95,7 +95,7 @@ class Vakhshour(object):
             fd = open(self.args.config)
 
         except IOError:
-            self.logger.critical("Config file '%s' does not exists." % (
+            print("Config file '%s' does not exists." % (
                 self.args.config))
             exit(1)
 
@@ -104,7 +104,7 @@ class Vakhshour(object):
             self.config = json.load(fd)
         except ValueError:
             fd.close()
-            self.logger.critical("Config file '%s' is not a json file." % (
+            print("Config file '%s' is not a json file." % (
                 self.args.config))
             exit(1)
 

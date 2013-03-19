@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -----------------------------------------------------------------------------
 #    Vakhshour - Event and Message layer application
-#    Copyright (C) 2012 Yellowen
+#    Copyright (C) 2012-2013 Yellowen
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 from distutils.core import setup
 
 setup(name='Vakhshour',
-      version='0.91.46',
+      version='0.91.47',
       description='Event and Message layer application',
       author='Sameer Rahmani',
       author_email='lxsameer@gnu.org',
@@ -30,7 +30,6 @@ setup(name='Vakhshour',
       keywords=('Event', 'message', 'transport'),
       license='GPL v2',
       scripts=["vakhshourd"],
-      #data_files=[("/etc/vakhshour/", ["conf/vakhshour.json"]), ],
       packages=['vakhshour', 'vakhshour.events', 'vakhshour.amp'],
       install_requires=['twisted', 'pyopenssl', 'pycrypto'],
       classifiers=[
